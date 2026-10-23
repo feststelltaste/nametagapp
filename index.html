@@ -130,7 +130,7 @@
   #list input { width:auto; }
   #list li.done label { color:var(--muted); text-decoration:line-through; }
   .preview { display:flex; flex-direction:column; align-items:center; }
-  .preview #print { flex:1; width:100%; min-height:90px; margin-top:12px; font-size:1.8rem; letter-spacing:.02em; order:3; }   /* riesig: füllt die Box bis nach unten */
+  .preview #print { flex:1; width:100%; min-height:64px; max-height:96px; margin-top:12px; font-size:1.4rem; letter-spacing:.02em; order:3; }   /* riesig: füllt die Box bis nach unten */
   .preview #status { order:2; }
   .preview .tagwrap { order:0; }
   #status { margin-top:12px; min-height:1.4em; color:var(--muted); font-size:.9rem; }
@@ -440,13 +440,13 @@ function displayName(full) {
 // sodass der Text entlang des Papiervorschubs läuft.
 // Anzeigegröße der Vorschau: Maßstab (Bildschirmpixel je Druckpunkt) so, dass das Etikett bei Zoom 1 die Karte füllt;
 // bei kleinerer Schrift bleibt der Maßstab, die Breite (48 mm) also gleich und nur die Länge wird kürzer.
-let previewLengthPx = 0;
+let previewFullPx = 0, previewPrintedPx = 0;
 function applyPreviewSize() {
-  if (!previewLengthPx) return;
+  if (!previewFullPx) return;
   const card = canvas.closest(".preview");
   const available = Math.max(120, card.clientWidth - 32);
-  const k = Math.min(available / previewLengthPx, 1.2);
-  canvas.style.width = Math.round(previewLengthPx * zoom * k) + "px";
+  const k = Math.min(available / previewFullPx, 1.2);   // Maßstab hängt nicht vom Zoom ab: gleiche Etikettenbreite, nur die Länge ändert sich
+  canvas.style.width = Math.round(previewPrintedPx * k) + "px";
   canvas.style.height = Math.round(WIDTH * k) + "px";
 }
 new ResizeObserver(applyPreviewSize).observe(canvas.closest(".preview"));
@@ -458,13 +458,11 @@ function drawLabel() {
   const tags = parseTags($("tags").value);
   const probe = document.createElement("canvas").getContext("2d");
   const TITLE_INSET = 14;   // Titel etwas weiter vom oberen Rand weg
-  // Seitenrand in Layout-Punkten: der Rand soll gedruckt immer gleich groß sein, auch wenn das Layout mit dem Zoom verkleinert wird
-  const sideMargin = sideCm * 10 * DOTS_PER_MM / zoom;
   const titleSize = 26, titleLineH = 32, greetSize = 36, greetLineH = 44;
   const tagSize = 30, chipPadX = 6, chipH = 33, chipGap = 14, tagRowGap = 3;   // tagRowGap: Abstand zwischen zwei Hashtag-Zeilen (chipGap gilt waagerecht)
 
   // Misst Titel, Name und Hashtags für eine gegebene Etikettenlänge (in Punkten).
-  function measure(lengthPx) {
+  function measure(lengthPx, sideMargin) {
     const inner = Math.max(60, lengthPx - 2 * sideMargin);
     probe.font = `bold ${titleSize}px ${FONT_TEXT}`;
     const titleLines = title ? wrapWords(probe, title, inner) : [];
@@ -511,20 +509,26 @@ function drawLabel() {
              usedWidth: Math.max(titleWidth, greetWidth, rowsWidth, nameWidth) };
   }
 
-  // Länge: automatisch aus dem Inhalt (breiteste Zeile + Rand) oder vom Nutzer vorgegeben.
-  const MIN_PX = 25 * DOTS_PER_MM, MAX_PX = 100 * DOTS_PER_MM;
-  const AUTO_MAX_PX = 100 * DOTS_PER_MM;   // längste automatische Länge (mm * 8)
-  let lengthPx, m;
-  if ($("autoLength").checked) {
-    m = measure(AUTO_MAX_PX);   // längere Namen werden kleiner statt das Etikett zu verlängern
-    lengthPx = Math.max(MIN_PX, Math.min(AUTO_MAX_PX, Math.ceil(m.usedWidth) + 2 * sideMargin));
-    m = measure(lengthPx);
-    $("length").value = Math.round(lengthPx / DOTS_PER_MM);
-  } else {
-    lengthPx = Math.max(MIN_PX, Math.min(MAX_PX, Math.round((parseFloat($("length").value) || 80) * DOTS_PER_MM)));
-    m = measure(lengthPx);
+  // Länge und Seitenränder gelten für das gedruckte Etikett. Das Layout wird mit dem Zoom verkleinert, deshalb rechnen wir
+  // sie in Layout-Punkte um (durch den Zoom teilen); gedruckt bleiben Rand und maximale Länge so groß wie eingestellt.
+  function planFor(z) {
+    const sideMargin = sideCm * 10 * DOTS_PER_MM / z;
+    const minPx = 25 * DOTS_PER_MM / z, maxPx = 100 * DOTS_PER_MM / z;   // 25 bis 100 mm gedruckt
+    const clamp = v => Math.max(minPx, Math.min(maxPx, v));
+    let lengthPx, m;
+    if ($("autoLength").checked) {
+      m = measure(maxPx, sideMargin);   // längere Namen werden kleiner statt das Etikett zu verlängern
+      lengthPx = clamp(Math.ceil(m.usedWidth) + 2 * sideMargin);
+    } else {
+      lengthPx = clamp(Math.round((parseFloat($("length").value) || 80) * DOTS_PER_MM / z));
+    }
+    return { lengthPx, sideMargin, m: measure(lengthPx, sideMargin) };
   }
+  const plan = planFor(zoom);
+  const { lengthPx, m } = plan;
+  if ($("autoLength").checked) $("length").value = Math.round(lengthPx * zoom / DOTS_PER_MM);   // gedruckte Länge in mm
   $("length").disabled = $("autoLength").checked;
+  const fullPrintedPx = zoom === 1 ? lengthPx : planFor(1).lengthPx;   // gedruckte Länge bei Zoom 1: bestimmt den Anzeigemaßstab
   const { titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight } = m;
 
   // Zeichnet das liegende Etikett; scale > 1 ergibt dasselbe Bild in höherer Auflösung (glatte Vorschau).
@@ -582,7 +586,8 @@ function drawLabel() {
   canvas.width = Math.round(lengthPx * zoom * PREVIEW_SCALE);
   canvas.height = WIDTH * PREVIEW_SCALE;
   canvas.getContext("2d").drawImage(hi, 0, Math.round((canvas.height - hi.height) / 2));   // Inhalt mittig auf der festen Breite
-  previewLengthPx = lengthPx;
+  previewFullPx = fullPrintedPx;
+  previewPrintedPx = lengthPx * zoom;
   applyPreviewSize();
   const layout = paint(zoom);   // dasselbe Etikett in Druckgröße; bei Zoom < 1 neu gezeichnet statt verkleinert, damit die Schrift scharf bleibt
 
