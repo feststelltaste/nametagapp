@@ -44,12 +44,16 @@
   .room-side p { margin:0 0 10px; }
   .roomwarn { padding:10px 12px; border-radius:8px; background:rgba(234,179,8,.16); border:1px solid rgba(234,179,8,.5); font-size:.9rem; }
   .roomwarn b { font-weight:700; }
+  .roomwarn a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+  .roomwarn a:hover mark { text-decoration:underline; }
+  .roomwarn mark { background:none; color:var(--fg); font-weight:800; }   /* nur fett, in der normalen Textfarbe (hell: schwarz) */
   .roombtns .roomgo { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600; }
   .roomstate { margin-top:10px; padding:8px 10px; border-radius:8px; background:var(--accent-soft); font-size:.9rem; }
   .roomstate.bad { background:rgba(220,38,38,.14); }
   .linkrow { display:flex; gap:8px; }
   .linkrow input { flex:1; min-width:0; font-size:.75rem; }
   .linkrow button, .roombtns button { width:auto; margin:0; padding:8px 14px; background:transparent; color:var(--fg); border:1px solid var(--line); font-size:.9rem; }
+  .roomnote { margin:12px 0 0 !important; font-size:.9rem; color:var(--muted); }
   .roomeach { display:flex; gap:8px; align-items:center; font-weight:400; font-size:.9rem; margin-top:12px; }
   .roombtns { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
   .roombtns #roomStop { margin-right:auto; color:var(--muted); }
@@ -125,6 +129,7 @@
   .rolls button.toggle { background:transparent; color:var(--fg); border:1px solid var(--line); }
   .rolls button.toggle[aria-pressed="true"] { background:var(--accent-mid); color:var(--fg); border-color:var(--accent); }
   #checklist { margin-top:12px; }
+  .nickrow { display:flex; gap:8px; align-items:center; font-weight:400; margin:10px 0 0 !important; }
   #colConfig label.inl { display:flex; gap:8px; align-items:center; font-weight:400; margin:8px 0 0; }
   #colConfig label.inl input { width:auto; }
   select { width:100%; padding:10px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; }
@@ -180,6 +185,10 @@
       <button type="button" id="checkOff" class="chip check" aria-pressed="false" data-i18n-title="checkOffTitle" data-i18n-aria="checkOffTitle" title="Check off this person in the attendee list (without printing)" aria-label="Check off this person in the attendee list (without printing)">☐</button>
       <button type="button" id="firstOnly" class="chip two" aria-pressed="true" data-i18n-title="firstOnlyTitle" title="Print only the first word of the name (on/off)" data-i18n-html="firstOnly">First<br>name only</button>
     </div>
+    <div id="realRow" hidden>
+      <label for="realName" data-i18n="realLabel">Real name (search or complete)</label>
+      <input id="realName" list="realNames" autocomplete="off" data-i18n-ph="realPh" placeholder="Real name, for receipts">
+    </div>
 
     <label for="tags">Hashtags</label>
     <textarea id="tags" data-i18n-ph="tagsPh" placeholder="#java #architecture #docs-as-code"></textarea>
@@ -189,6 +198,7 @@
   <section class="people">
     <h2 data-i18n="peopleTitle">Attendee list</h2>
     <input type="file" id="file" accept=".csv,.tsv,.txt,text/csv,text/plain">
+    <label class="nickrow"><input type="checkbox" id="nickMode" style="width:auto"> <span data-i18n="nickMode">Overwrite nicknames with real names</span></label>
     <div id="colConfig" hidden>
       <label class="inl" for="hasHeader"><input type="checkbox" id="hasHeader" checked> <span data-i18n="hasHeader">First row contains column titles</span></label>
       <label for="nameCol" data-i18n="colLabel">Select the column containing the name</label>
@@ -283,12 +293,13 @@
         <div class="room-grid">
           <div id="roomQr" aria-label="QR code"></div>
           <div class="room-side">
-            <p data-i18n="roomExplain">Scan the QR code with a phone or tablet, or open the link there. The label then follows live.</p>
+            <p data-i18n="roomExplain">Scan the QR code with a phone or tablet. The label then follows live.</p>
             <div class="linkrow"><input id="roomLink" readonly aria-label="Link"><button type="button" id="roomCopy" data-i18n="copy">Copy</button></div>
             <div id="roomState" class="roomstate"></div>
-            <label class="roomeach"><input type="checkbox" id="roomEach" style="width:auto"> <span data-i18n="roomEach">New QR code after each print</span></label>
+            <p class="roomnote" data-i18n="roomEach">After each print a new QR code is created; each guest only keeps their own name tag.</p>
           </div>
         </div>
+        <p class="roomwarn" data-i18n-html="roomDisclosure" style="margin-top:14px">…</p>
         <div class="roombtns">
           <button type="button" id="roomStop" data-i18n="roomStop">Stop sharing</button>
           <button type="button" id="roomNew" data-i18n="roomNew">New code</button>
@@ -299,6 +310,7 @@
   </div>
   <div id="qrbox" hidden><div class="card"><canvas id="qrcanvas" aria-label="QR-Code"></canvas><div class="url">feststelltaste.github.io/nametagapp</div></div></div>
   <datalist id="people"></datalist>
+  <datalist id="realNames"></datalist>
 </main>
 
 <script src="vendor/qrcode.js"></script>
@@ -335,7 +347,7 @@ const T = {
     download: "⬇ CSV herunterladen", downloadTitle: "Liste mit Spalte „Gedruckt“ als CSV speichern", reset: "Haken zurücksetzen", removeList: "🗑 Liste entfernen", removeListTitle: "Die aktuell geladene Liste aus diesem Browser entfernen",
     removeConfirm: n => `Die Liste mit ${n} Haken entfernen? Die Haken gehen verloren, wenn du sie nicht vorher als CSV herunterlädst.`,
     checksHint: "Die Haken liegen nur in diesem Browser. Zum Sichern oder für einen anderen Rechner: herunterladen und die Datei später wieder oben hochladen, die Haken kommen dann mit zurück.",
-    csvHeader: "Name;Gedruckt", yes: "Ja", no: "Nein", csvFile: "teilnehmer",
+    csvHeader: "Name;Echter Name;Gedruckt", nickMode: "Nicknames mit echten Namen überschreiben", realLabel: "Echter Name (suchen oder ergänzen)", realPh: "Echter Name, für Bewirtungsbelege", yes: "Ja", no: "Nein", csvFile: "teilnehmer",
     print: "Drucken", lengthLabel: "Etikettenlänge (mm, Papier läuft quer)", autoLength: "Länge automatisch aus dem Inhalt berechnen",
     flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
     openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
@@ -343,13 +355,13 @@ const T = {
     close: "Schließen", copy: "Kopieren", copied: "Kopiert",
     roomBtn: "Zweiter Bildschirm auf einem anderen Gerät (QR-Code)", roomBtnOn: "Zweiter Bildschirm läuft (QR-Code)",
     roomHeading: "Zweiten Bildschirm auf einem anderen Gerät öffnen",
-    roomExplain: "Scanne den QR-Code mit einem Handy oder Tablet oder öffne den Link dort. Das Etikett läuft dann live mit.",
-    roomEach: "Nach jedem Druck ein neuer QR-Code (jeder Gast behält nur sein eigenes Namensschild)",
+    roomExplain: "Scanne den QR-Code mit einem Handy oder Tablet. Das Etikett läuft dann live mit.",
+    roomEach: "Nach jedem Druck entsteht ein neuer QR-Code; jeder Gast behält nur sein eigenes Namensschild.",
     roomNew: "Neuer Code", roomStop: "Teilen beenden", cancel: "Abbrechen", roomStart: "Teilen starten",
     roomIntro: "Damit zeigt ein Handy oder Tablet das Etikett live: Es scannt einen QR-Code und folgt jeder Änderung.",
-    roomDisclosure: "<b>Bevor du startest:</b> Titel, Name, Zwischenzeile und Hashtags gehen <b>Ende-zu-Ende verschlüsselt</b> über den öffentlichen Dienst <b>ntfy.sh</b> (Drittanbieter). Der Schlüssel steckt nur im QR-Code, der Dienst sieht nur verschlüsselte Daten, aber IP-Adressen und Zeitpunkte, und speichert die Nachrichten bis zu 12 Stunden. Die kostenlose Nutzung ist auf etwa 250 Nachrichten pro Tag begrenzt. Ob du dafür einen Auftragsverarbeitungsvertrag oder eine Information der Teilnehmer brauchst, musst du selbst prüfen. Ohne Teilen geht nichts nach außen.",
+    roomDisclosure: "<b>Hinweis:</b> Beim Start verbindet sich diese Seite mit dem Drittanbieter <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (sichtbar: deine <mark>IP-Adresse</mark>, die Seitenadresse, deine Browser-Kennung und eine Zufalls-ID). <mark>Etikett-Daten gehen erst raus, wenn ein Gerät den QR-Code geöffnet hat</mark>, dann aber <mark>Ende-zu-Ende verschlüsselt</mark> und vom Dienst <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'><mark>bis zu 12 Stunden</mark> zwischengespeichert</a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details und Datenschutz-Hinweise in der README</a>.",
     roomCount: n => `Heute gesendet: ${n} von etwa 250 Nachrichten (Limit des kostenlosen Dienstes).`, roomLimit: "Limit des kostenlosen Dienstes erreicht. Es geht nach einer Pause oder morgen weiter.",
-    roomLive: "Läuft: Änderungen gehen sofort an alle Geräte, die den Link geöffnet haben.", roomOffline: "Kein Kontakt zum Relay-Dienst (Internet?). Der zweite Bildschirm bekommt erst wieder Änderungen, wenn er erreichbar ist.", roomOff: "Wird nicht geteilt.",
+    roomWaiting: "Wartet auf das erste Gerät. Bisher wurde nichts gesendet.", roomLive: "Läuft: Änderungen gehen sofort an alle Geräte, die den QR-Code geöffnet haben.", roomOffline: "Kein Kontakt zum Relay-Dienst (Internet?). Der zweite Bildschirm bekommt erst wieder Änderungen, wenn er erreichbar ist.", roomOff: "Wird nicht geteilt.",
     clear: "Leeren", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLabel: "Seitenränder (cm)",
     sizeInfo: (l, w) => `Etikett ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Gesendet in ${sec} s (${bytes} Bytes) – warte auf den Druck …`,
@@ -377,7 +389,7 @@ const T = {
     download: "⬇ Download CSV", downloadTitle: "Save the list as CSV with a “Printed” column", reset: "Reset checkmarks", removeList: "🗑 Remove list", removeListTitle: "Remove the currently loaded list from this browser",
     removeConfirm: n => `Remove the list with ${n} checkmarks? The checkmarks are lost unless you download them as CSV first.`,
     checksHint: "Checkmarks are only stored in this browser. To back them up or use another computer: download the list and upload the file above later – the checkmarks come back with it.",
-    csvHeader: "Name;Printed", yes: "Yes", no: "No", csvFile: "attendees",
+    csvHeader: "Name;Real name;Printed", nickMode: "Overwrite nicknames with real names", realLabel: "Real name (search or complete)", realPh: "Real name, for receipts", yes: "Yes", no: "No", csvFile: "attendees",
     print: "Print", lengthLabel: "Label length (mm, paper runs sideways)", autoLength: "Calculate length automatically from the content",
     flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
     openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
@@ -385,13 +397,13 @@ const T = {
     close: "Close", copy: "Copy", copied: "Copied",
     roomBtn: "Second screen on another device (QR code)", roomBtnOn: "Second screen is running (QR code)",
     roomHeading: "Open the second screen on another device",
-    roomExplain: "Scan the QR code with a phone or tablet, or open the link there. The label then follows live.",
-    roomEach: "New QR code after each print (each guest only keeps their own name tag)",
+    roomExplain: "Scan the QR code with a phone or tablet. The label then follows live.",
+    roomEach: "After each print a new QR code is created; each guest only keeps their own name tag.",
     roomNew: "New code", roomStop: "Stop sharing", cancel: "Cancel", roomStart: "Start sharing",
     roomIntro: "With this, a phone or tablet can show the label live: it scans a QR code and follows every change.",
-    roomDisclosure: "<b>Before you start:</b> title, name, intro line and hashtags go <b>end-to-end encrypted</b> through the public service <b>ntfy.sh</b> (a third party). The key is only in the QR code; the service only sees encrypted data, but also IP addresses and timing, and keeps the messages for up to 12 hours. Free use is limited to about 250 messages per day. Whether you need a data processing agreement or have to inform participants is for you to check. Without sharing, nothing leaves this device.",
+    roomDisclosure: "<b>Note:</b> when you start, this page connects to the third party <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (visible: your <mark>IP address</mark>, the page address, your browser type and a random ID). <mark>Label data only leaves once a device has opened the QR code</mark>, but then <mark>end-to-end encrypted</mark> and <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'>cached by the service <mark>for up to 12 hours</mark></a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details and privacy notes in the README</a>.",
     roomCount: n => `Sent today: ${n} of about 250 messages (limit of the free service).`, roomLimit: "Limit of the free service reached. It continues after a pause or tomorrow.",
-    roomLive: "Running: changes go to every device that has opened the link right away.", roomOffline: "The relay is not reachable (internet?). The second screen gets changes again once it is.", roomOff: "Not shared.",
+    roomWaiting: "Waiting for the first device. Nothing has been sent yet.", roomLive: "Running: changes go to every device that has opened the QR code right away.", roomOffline: "The relay is not reachable (internet?). The second screen gets changes again once it is.", roomOff: "Not shared.",
     clear: "Clear", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLabel: "Side margins (cm)",
     sizeInfo: (l, w) => `Label ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Sent in ${sec} s (${bytes} bytes) – waiting for the print …`,
@@ -444,9 +456,14 @@ function applyPreviewSize() {
 new ResizeObserver(applyPreviewSize).observe(canvas.closest(".preview"));
 
 // Eingaben des Editors als Modell für label.js (dasselbe Modell geht an die Live-Ansicht)
+// Name auf dem Etikett: der echte Name der gewählten Person, wenn "Nicknames überschreiben" an ist und einer eingetragen ist
+function labelName() {
+  if ($("nickMode").checked) { const person = matchPerson(); if (person?.real) return person.real; }
+  return $("name").value;
+}
 function labelModel() {
   return {
-    title: $("title").value, greeting: $("greeting").value, name: $("name").value, firstOnly: firstOnly(), tags: $("tags").value,
+    title: $("title").value, greeting: $("greeting").value, name: labelName(), firstOnly: firstOnly(), tags: $("tags").value,
     autoLength: $("autoLength").checked, lengthMm: parseFloat($("length").value) || 80, zoom, sideCm,
   };
 }
@@ -499,7 +516,7 @@ function toOneBit(ctx) {
 // Eingaben und Optionen bleiben beim Neuladen erhalten (localStorage; ohne Zugriff startet die Seite leer).
 const FIELDS_KEY = "meetupapp.fields";
 const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub"];
-const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
+const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
     const state = { gender, rollCount, zoom, sideCm, titleLocked: titleLocked() };
@@ -648,7 +665,7 @@ $("form").addEventListener("submit", async event => {
     setFirstOnly(true);   // nächstes Etikett wieder nur mit Vornamen
     render();
     status(t("printed", result.sent.toFixed(1), result.total.toFixed(1), result.rows));
-    if (room && $("roomEach").checked) startRoom({ blank: true });   // nächster Gast scannt einen frischen Code; wer den alten gescannt hat, behält sein Etikett
+    if (room) startRoom({ blank: true });   // nächster Gast scannt einen frischen Code; wer den alten gescannt hat, behält sein Etikett
     if ($("rerollAfterPrint").checked && $("greeting").value.trim()) rollGreeting(rollCount);   // nur wenn die Zwischenzeile benutzt wird
   } catch (error) {
     if (error.name === "NotFoundError") status(t("noPrinter"), true);
@@ -735,6 +752,7 @@ function guessHasHeader(rows) {
 
 let csvRows = null;              // zuletzt hochgeladene Datei (für die Spaltenauswahl)
 let doneFromFile = new Set();    // Haken aus einer früher heruntergeladenen Liste
+let realFromFile = new Map();    // echte Namen aus einer früher heruntergeladenen Liste
 const NAMECOL_KEY = "meetupapp.nameCol";   // gemerkt wird der Spaltenname (oder "auto"/"split")
 
 function columnCount() { return csvRows ? Math.max(0, ...csvRows.slice(0, 20).map(r => r.length)) : 0; }
@@ -772,10 +790,19 @@ function applyNames() {
   const names = extractNamesFromRows(csvRows, $("nameCol").value || "auto", $("hasHeader").checked);
   if (!names.length) { $("listInfo").textContent = t("noNames"); return; }
   const done = new Set([...people.filter(p => p.done).map(p => p.name), ...doneFromFile]);
-  people = names.map(name => ({ name, done: done.has(name) }));
+  const reals = new Map([...people.filter(p => p.real).map(p => [p.name, p.real]), ...realFromFile]);
+  people = names.map(name => ({ name, done: done.has(name), real: reals.get(name) || "" }));
   save(); renderList();
 }
 
+function realNamesFromCsv(text) {
+  const rows = parseCsv(text);
+  if (rows.length < 2) return new Map();
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const nameCol = header.indexOf("name"), realCol = header.findIndex(h => h === "real name" || h === "echter name");
+  if (nameCol < 0 || realCol < 0) return new Map();
+  return new Map(rows.slice(1).map(r => [(r[nameCol] || "").replace(/\s+/g, " ").trim(), (r[realCol] || "").trim()]).filter(([name, real]) => name && real));
+}
 function doneNamesFromCsv(text) {
   const rows = parseCsv(text);
   if (rows.length < 2) return [];
@@ -787,7 +814,7 @@ function doneNamesFromCsv(text) {
 
 function downloadList() {
   const quote = v => `"${String(v).replace(/"/g, '""')}"`;
-  const lines = [t("csvHeader"), ...people.map(p => `${quote(p.name)};${p.done ? t("yes") : t("no")}`)];
+  const lines = [t("csvHeader"), ...people.map(p => `${quote(p.name)};${quote(p.real || "")};${p.done ? t("yes") : t("no")}`)];
   const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -806,6 +833,31 @@ function matchPerson() {
   return byFirst.find(p => !p.done) || byFirst[0] || null;
 }
 
+// Das Feld unter dem Namen gibt es nur, wenn "Nicknames überschreiben" angekreuzt ist
+function syncRealField() {
+  const on = $("nickMode").checked;
+  $("realRow").hidden = !on;
+  if (!on) return;
+  const person = matchPerson();
+  if (document.activeElement !== $("realName")) $("realName").value = person?.real || "";
+}
+$("nickMode").addEventListener("change", () => { syncRealField(); renderList(); render(); });
+$("realName").addEventListener("input", () => {   // ergänzt den echten Namen der gewählten Person in der Liste
+  const person = matchPerson();
+  if (!person) return;
+  person.real = $("realName").value.trim();
+  save(); renderList(); render();
+});
+$("realName").addEventListener("change", () => {
+  const typed = $("realName").value.trim();
+  if (!typed || matchPerson()) return;
+  const known = people.find(p => p.real && p.real.toLowerCase() === typed.toLowerCase());
+  if (known) { $("name").value = known.name; roomHold = false; syncRealField(); updateCheckOff(); render(); return; }   // suchen: die Person mit diesem echten Namen auswählen
+  const nickname = $("name").value.trim() || typed;   // ergänzen: nicht in der Liste, also neu aufnehmen
+  people.push({ name: nickname, done: false, real: typed });
+  $("name").value = nickname;
+  save(); renderList(); render();
+});
 function updateCheckOff() {
   const person = matchPerson();
   const done = Boolean(person?.done);
@@ -818,9 +870,11 @@ function renderList() {
   $("people").replaceChildren(...people.map(p => {
     const option = document.createElement("option");
     option.value = p.name;
-    if (p.done) option.label = `✓ ${p.name}`;
+    const shown = $("nickMode").checked && p.real ? `${p.name} (${p.real})` : p.name;
+    if (p.done || shown !== p.name) option.label = (p.done ? "✓ " : "") + shown;
     return option;
   }));
+  $("realNames").replaceChildren(...[...new Set(people.map(p => p.real).filter(Boolean))].map(real => Object.assign(document.createElement("option"), { value: real })));
   $("list").replaceChildren(...people.map(p => {
     const li = document.createElement("li");
     li.className = p.done ? "done" : "";
@@ -829,13 +883,15 @@ function renderList() {
     box.type = "checkbox";
     box.checked = p.done;
     box.addEventListener("change", () => { p.done = box.checked; save(); renderList(); });
-    label.title = p.name;   // voller Name als Tooltip
-    label.append(box, firstName(p.name));
+    const shownName = $("nickMode").checked && p.real ? p.real : p.name;
+    label.title = p.real && p.real !== p.name ? `${p.name} → ${p.real}` : p.name;   // voller Name als Tooltip
+    label.append(box, firstName(shownName));
     li.append(label);
     return li;
   }));
   $("checklist").hidden = !people.length;
   updateCheckOff();
+  syncRealField();
   const done = people.filter(p => p.done).length;
   $("listInfo").textContent = people.length ? t("listInfo", people.length, done) : t("listInfoDefault");
 }
@@ -846,6 +902,7 @@ $("file").addEventListener("change", async event => {
   const text = await file.text();
   csvRows = parseCsv(text);
   doneFromFile = new Set(doneNamesFromCsv(text));
+  realFromFile = realNamesFromCsv(text);
   $("hasHeader").checked = guessHasHeader(csvRows);
   $("nameCol").value = "";   // frische Datei: gemerkte Spalte aus dem Speicher, nicht die der vorigen Datei
   refreshColumnOptions();
@@ -881,12 +938,12 @@ $("checkOff").addEventListener("click", () => {
   person.done = !person.done;   // von Hand abhaken oder wieder öffnen
   save(); renderList();
 });
-$("name").addEventListener("input", updateCheckOff);
+$("name").addEventListener("input", () => { updateCheckOff(); syncRealField(); });
 $("download").addEventListener("click", downloadList);
 $("removeList").addEventListener("click", () => {
   const checked = people.filter(p => p.done).length;
   if (checked && !confirm(t("removeConfirm", checked))) return;   // nur nachfragen, wenn Haken verloren gehen
-  people = []; csvRows = null; doneFromFile = new Set();
+  people = []; csvRows = null; doneFromFile = new Set(); realFromFile = new Map();
   $("file").value = "";   // dieselbe Datei lässt sich danach erneut laden
   save(); renderList(); refreshColumnOptions(); updateCheckOff();
 });
@@ -1142,7 +1199,8 @@ $("accentReset").addEventListener("click", () => { applyAccent(null); try { loca
 // ---------- Zweiter Bildschirm auf einem anderen Gerät: Raum über den verschlüsselten Relay ----------
 // Der Editor legt jede Änderung (nur Text und Einstellungen) verschlüsselt im Raum ab, jedes Gerät mit dem Link zeichnet das Etikett selbst.
 let room = null;            // { topic, key, token } oder null (wird nicht geteilt)
-let roomTimer = null, roomLastSent = 0, roomDirty = false, roomHold = false;
+let roomTimer = null, roomLastSent = 0, roomDirty = false, roomHold = false, roomJoined = false, roomListener = null;
+const blankPayload = () => ({ model: { ...labelModel(), name: "", greeting: "", tags: "" }, welcome: welcomeText() });
 
 const roomLink = () => { const url = new URL("view.html", location.href); url.hash = "r=" + room.token; return url.href; };
 
@@ -1163,7 +1221,7 @@ async function sendRoom(payload = { model: labelModel(), welcome: welcomeText() 
 }
 // Änderungen bündeln: höchstens eine Nachricht pro 1,2 s; nach dem Druck wartet ein neuer Raum, bis jemand tippt (roomHold)
 function scheduleRoom(now = false) {
-  if (!room || roomHold) return;
+  if (!room || roomHold || !roomJoined) return;   // gesendet wird erst, wenn ein Gerät den QR-Code geöffnet hat
   roomDirty = true;
   if (roomTimer) return;
   const wait = now ? 0 : Math.max(250, 1200 - (Date.now() - roomLastSent));
@@ -1172,17 +1230,17 @@ function scheduleRoom(now = false) {
 
 // Neuer Raum. Nach dem Druck (blank) beginnt er leer, ohne Namen und Hashtags des vorigen Gastes, und wird erst beim nächsten Tippen aktuell.
 function startRoom({ blank = false } = {}) {
-  clearTimeout(roomTimer); roomTimer = null;
+  clearTimeout(roomTimer); roomTimer = null; roomListener?.close();
   room = Relay.createRoom();
-  roomError = null; roomLastJson = "";
-  if (blank) {
-    roomHold = true;
-    sendRoom({ model: { ...labelModel(), name: "", greeting: "", tags: "" }, welcome: welcomeText() });
-  } else { roomHold = false; scheduleRoom(true); }
+  roomError = null; roomLastJson = ""; roomJoined = false; roomHold = blank;
+  // Nichts senden, bis sich ein Gerät meldet. Meldet sich eins (auch erneut nach einem Verbindungsabbruch), geht der Stand raus;
+  // in einem Raum nach dem Druck der leere Stand, bis jemand tippt.
+  roomListener = Relay.listen(room, () => { roomJoined = true; roomLastJson = ""; sendRoom(roomHold ? blankPayload() : undefined); updateRoomUi(); });
   announcePair(); updateRoomUi();
 }
 function stopRoom() {
-  clearTimeout(roomTimer); roomTimer = null; room = null; roomHold = false; roomError = null; roomLastJson = "";
+  clearTimeout(roomTimer); roomTimer = null; roomListener?.close(); roomListener = null;
+  room = null; roomHold = false; roomJoined = false; roomError = null; roomLastJson = "";
   announcePair(); updateRoomUi();
 }
 function updateRoomUi() {
@@ -1190,7 +1248,8 @@ function updateRoomUi() {
   $("roomBtn").setAttribute("aria-pressed", String(on));
   $("roomBtn").title = $("roomBtn").ariaLabel = on ? t("roomBtnOn") : t("roomBtn");
   $("roomOff").hidden = on; $("roomOn").hidden = !on;
-  $("roomState").textContent = !on ? "" : roomError === "limit" ? t("roomLimit") : roomError === "offline" ? t("roomOffline") : t("roomLive") + " " + t("roomCount", roomSentToday());
+  $("roomState").textContent = !on ? "" : roomError === "limit" ? t("roomLimit") : roomError === "offline" ? t("roomOffline")
+    : !roomJoined ? t("roomWaiting") + " " + t("roomCount", roomSentToday()) : t("roomLive") + " " + t("roomCount", roomSentToday());
   $("roomState").classList.toggle("bad", on && roomError !== null);
   if (!on) { $("roomLink").value = ""; $("roomQr").innerHTML = ""; return; }
   const link = roomLink();
@@ -1210,8 +1269,6 @@ $("roomCopy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText($("roomLink").value); } catch { $("roomLink").select(); document.execCommand?.("copy"); }
   $("roomCopy").textContent = t("copied"); setTimeout(() => { $("roomCopy").textContent = t("copy"); }, 1500);
 });
-$("roomEach").checked = (() => { try { return localStorage.getItem("meetupapp.roomEach") !== "0"; } catch { return true; } })();
-$("roomEach").addEventListener("change", () => { try { localStorage.setItem("meetupapp.roomEach", $("roomEach").checked ? "1" : "0"); } catch {} });
 
 // QR-Code zur Seite https://feststelltaste.github.io/nametagapp/ (vorab erzeugt, ECC M); erscheint beim Klick auf den Titel, Klick oder Esc schließt ihn
 const PAGE_QR = ["111111100101110001111011001111111", "100000100000011101000010001000001", "101110101101110001101001101011101", "101110101110001110001110101011101", "101110101100110100100100101011101", "100000101000111110001110001000001", "111111101010101010101010101111111", "000000001000000100000101000000000", "101111100010011101101011001111100", "010110001101100010111101001101101", "011111101011000110101100100010110", "111110000110001110010110010011111", "101000101010100100100100110111011", "010011001110001111001111101001011", "100101110100111001010110111100010", "101100010100101010111110111001100", "000100101100100011011010010110001", "101101000001010011111001001101101", "110000101110101101001010010110100", "110111010110000101100001111111111", "000110110111010010001110010011011", "101001001000001100100001001000101", "100111111110111111001110110001110", "101010011001011100000100101001100", "100000110111000101000010111110011", "000000001100011010111101100010101", "111111100010000100100101101010110", "100000101100101110001111100011110", "101110101110110100100100111111001", "101110101111110111001011110011001", "101110101111111000110111101101100", "100000100110100010011101000011100", "111111101000011011011011110100010"];

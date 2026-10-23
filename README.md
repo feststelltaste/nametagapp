@@ -35,7 +35,12 @@ Developed for the **X6h** (50 mm labels, 48 mm print width). Other printers that
 ## Privacy
 
 Everything stays in your browser. Attendee lists, settings and the last label live in the browser's local storage and are never uploaded. **Do not commit real attendee lists to a repository.**
-Nothing leaves your computer unless you start *sharing to another device*. Then title, name, intro line, hashtags and the second screen text go **end-to-end encrypted (AES-GCM, the key is only in the QR code)** through the public relay **ntfy.sh**. The service sees only encrypted data, but also IP addresses and timing, and keeps messages for up to 12 hours. Free use is limited to about 250 messages per day. Whether you need a data processing agreement or have to inform participants is for you to check.
+Nothing leaves your computer unless you start *sharing to another device*. Then it happens in two steps:
+
+1. **When you press Start sharing**, the page connects to the public service **ntfy.sh** (run by ntfy LLC) to wait for a device. The connection is made **directly from your browser** (not via GitHub). The service sees **your IP address**, the address of the page (`feststelltaste.github.io`), your browser type and a random room ID, but no label data and no cookies.
+2. **When a phone or tablet opens the QR code**, the label data (title, name, intro line, hashtags and the second screen text) is sent to that room, **end-to-end encrypted** (AES-GCM; the key is only in the QR code, never sent to a server). The service stores the encrypted messages for up to **12 hours** and also sees the **IP addresses** of both devices and the timing. After each print a new, empty room is used, so a guest never sees someone else's name.
+
+Free use needs no account but is limited (about 250 messages per day per IP address, no guarantee of availability). See ntfy's [privacy policy](https://docs.ntfy.sh/privacy/) and [terms](https://docs.ntfy.sh/terms/). Whether you need a **data processing agreement** (Auftragsverarbeitungsvertrag) or have to inform participants is for you to check; the encryption is meant to keep names away from the service, but it is not legal advice. If you do not want any third party, do not use this function and show the second window on a local monitor instead.
 
 ---
 
@@ -73,7 +78,12 @@ Entwickelt für den **X6h** (50-mm-Etiketten, 48 mm Druckbreite). Andere Drucker
 ### Datenschutz
 
 Alles bleibt in deinem Browser. Teilnehmerlisten, Einstellungen und das letzte Etikett liegen im lokalen Speicher des Browsers und werden nie hochgeladen. **Echte Teilnehmerlisten gehören nicht in ein Repository.**
-Es verlässt nichts deinen Rechner, solange du das *Teilen auf einem anderen Gerät* nicht startest. Dann gehen Titel, Name, Zwischenzeile, Hashtags und der Text für den zweiten Bildschirm **Ende-zu-Ende verschlüsselt (AES-GCM, der Schlüssel steckt nur im QR-Code)** über den öffentlichen Relay-Dienst **ntfy.sh**. Der Dienst sieht nur verschlüsselte Daten, aber auch IP-Adressen und Zeitpunkte, und speichert Nachrichten bis zu 12 Stunden. Die kostenlose Nutzung ist auf etwa 250 Nachrichten pro Tag begrenzt. Ob du einen Auftragsverarbeitungsvertrag brauchst oder die Teilnehmer informieren musst, prüfst du selbst.
+Es verlässt nichts deinen Rechner, solange du das *Teilen auf einem anderen Gerät* nicht startest. Dann passiert es in zwei Schritten:
+
+1. **Beim Klick auf „Teilen starten"** verbindet sich die Seite mit dem öffentlichen Dienst **ntfy.sh** (Betreiber ntfy LLC), um auf ein Gerät zu warten. Die Verbindung entsteht **direkt aus deinem Browser** (nicht über GitHub). Der Dienst sieht **deine IP-Adresse**, die Adresse der Seite (`feststelltaste.github.io`), deinen Browser-Typ und eine zufällige Raum-ID, aber keine Etikett-Daten und keine Cookies.
+2. **Sobald ein Handy oder Tablet den QR-Code öffnet**, gehen die Etikett-Daten (Titel, Name, Zwischenzeile, Hashtags und der Text für den zweiten Bildschirm) in diesen Raum, **Ende-zu-Ende verschlüsselt** (AES-GCM; der Schlüssel steckt nur im QR-Code und geht nie an einen Server). Der Dienst speichert die verschlüsselten Nachrichten bis zu **12 Stunden** und sieht außerdem die **IP-Adressen** beider Geräte und die Zeitpunkte. Nach jedem Druck gilt ein neuer, leerer Raum, damit ein Gast nie den Namen eines anderen sieht.
+
+Die kostenlose Nutzung braucht kein Konto, ist aber begrenzt (etwa 250 Nachrichten pro Tag und IP-Adresse, keine Verfügbarkeitszusage). Siehe die [Datenschutzerklärung](https://docs.ntfy.sh/privacy/) und die [Nutzungsbedingungen](https://docs.ntfy.sh/terms/) von ntfy. Ob du einen **Auftragsverarbeitungsvertrag** brauchst oder die Teilnehmer informieren musst, prüfst du selbst; die Verschlüsselung soll die Namen vom Dienst fernhalten, ersetzt aber keine Rechtsberatung. Wer keinen Dritten möchte, nutzt diese Funktion nicht und zeigt das zweite Fenster auf einem lokalen Monitor.
 
 ---
 

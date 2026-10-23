@@ -178,6 +178,7 @@ function openRoom() {
   if (!room) { wait.textContent = L("bad"); return; }
   wait.innerHTML = ""; const b = document.createElement("b"); b.textContent = L("waitingTitle"); wait.append(b, L("waiting"));
   roomSubscription = Relay.subscribe(room, applyPayload, state => {
+    if (state === "verbunden") Relay.signal(room).catch(() => {});   // dem Editor melden: ab jetzt senden (auch nach einer Wiederverbindung)
     document.body.classList.toggle("lost", state === "getrennt");
     $("lostNote").textContent = state === "getrennt" ? L("reconnecting") : "";
   });

@@ -35,12 +35,27 @@ const Relay = (() => {
     return m ? { topic: m[1], key: m[2], token: m[0] } : null;
   }
 
-  /** Schickt ein Objekt verschlüsselt in den Raum. Wirft, wenn der Relay nicht erreichbar ist oder die Nachricht zu groß ist. */
-  async function publish(room, object) {
-    const sealed = await seal(room.key, JSON.stringify(object));
+  async function post(topic, key, object) {
+    const sealed = await seal(key, JSON.stringify(object));
     if (sealed.length > MAX_PAYLOAD) throw new Error("Nachricht zu groß");
-    const response = await fetch(`${SERVER}/${room.topic}`, { method: "POST", body: sealed });
+    const response = await fetch(`${SERVER}/${topic}`, { method: "POST", body: sealed });
     if (!response.ok) { const error = new Error(`Relay ${response.status}`); error.status = response.status; throw error; }
+  }
+
+  /** Schickt ein Objekt verschlüsselt in den Raum. Wirft, wenn der Relay nicht erreichbar ist oder die Nachricht zu groß ist. */
+  const publish = (room, object) => post(room.topic, room.key, object);
+
+  // Rückkanal ("<Thema>a"): Ein Gerät, das den QR-Code öffnet, meldet sich kurz. Erst darauf sendet der Editor, vorher geht nichts raus.
+  const signal = room => post(room.topic + "a", room.key, { hello: Date.now() });
+  function listen(room, onSignal) {
+    const source = new EventSource(`${SERVER}/${room.topic}a/sse?since=latest`);
+    source.onmessage = async event => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.event === "message" && JSON.parse(await unseal(room.key, data.message)).hello) onSignal();
+      } catch { /* fremde Nachricht: ignorieren */ }
+    };
+    return { close: () => source.close() };
   }
 
   /**
@@ -74,5 +89,5 @@ const Relay = (() => {
     return qr.createSvgTag({ cellSize: 3, margin: 8, scalable: true });
   }
 
-  return { createRoom, parseRoom, publish, subscribe, reachable, qrSvg };
+  return { createRoom, parseRoom, publish, signal, listen, subscribe, reachable, qrSvg };
 })();
