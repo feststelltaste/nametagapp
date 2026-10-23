@@ -397,6 +397,7 @@ function applyI18n() {
 }
 const canvas = $("canvas");                       // Vorschau (liegend)
 const printSource = document.createElement("canvas"); // Druckbild (gedreht)
+const printCtx = () => printSource.getContext("2d", { willReadFrequently: true });   // wird oft zurückgelesen (Schwellwert, Senden)
 
 function wrapWords(ctx, text, maxWidth) {
   const lines = [];
@@ -603,7 +604,7 @@ function drawLabel() {
   const printLength = layout.width, printHeight = layout.height;
   printSource.width = WIDTH;
   printSource.height = printLength;
-  const pctx = printSource.getContext("2d");
+  const pctx = printCtx();
   pctx.fillStyle = "#fff";
   pctx.fillRect(0, 0, WIDTH, printLength);
   if ($("flip").checked) { pctx.translate(WIDTH / 2 - printHeight / 2, printLength); pctx.rotate(-Math.PI / 2); }
@@ -752,7 +753,7 @@ async function ensureConnected() {
 }
 
 async function printCanvas() {
-  const image = printSource.getContext("2d").getImageData(0, 0, printSource.width, printSource.height);
+  const image = printCtx().getImageData(0, 0, printSource.width, printSource.height);
   const mode = PRINT;
   const data = buildJob(image, { energy: mode.energy, speed: mode.speed, quality: mode.quality, tailBd: mode.tail });
   const char = await ensureConnected();
@@ -1261,6 +1262,62 @@ $("accentText").addEventListener("input", () => {   // während des Tippens übe
 });
 $("accentText").addEventListener("change", syncAccentInput);   // beim Verlassen: ungültige Eingabe verwerfen, gültige als Hex zeigen
 $("accentReset").addEventListener("click", () => { applyAccent(null); try { localStorage.removeItem(ACCENT_KEY); } catch {} });
+
+// ---------- Spiegelmodus: Kopplung ----------
+let mirrorState = { key: "mirrorPreparing" };
+function setMirrorState(key, arg) { mirrorState = { key, arg }; updateMirrorUi(); }
+function updateMirrorUi() {
+  const on = Boolean(mirror?.open);
+  $("mirrorBtn").setAttribute("aria-pressed", String(on));
+  $("mirrorBtn").title = $("mirrorBtn").ariaLabel = on ? t("mirrorOn") : t("mirror");
+  $("mirrorState").textContent = t(mirrorState.key, mirrorState.arg);
+  $("mirrorSteps").hidden = mirrorState.key === "mirrorConnected";   // verbunden: Kopplung ausblenden
+}
+const answerFrom = text => (text.match(/(?:^|[#?&=\s])([zr]\.[A-Za-z0-9_-]{20,})/) || [])[1];
+
+const PAIR_TTL_MS = 5 * 60 * 1000;   // ein Code gilt 5 Minuten; danach wird das Angebot geschlossen, eine späte Antwort bringt nichts mehr
+let pairTimer = null;
+async function startPairing() {
+  clearTimeout(pairTimer);
+  mirror?.close(); mirror = null;   // der bisherige Code (und eine bestehende Verbindung) wird ungültig
+  $("mirrorAnswer").value = ""; $("mirrorQr").innerHTML = ""; $("mirrorLink").value = "";
+  setMirrorState("mirrorPreparing");
+  try {
+    mirror = await Mirror.host({
+      onOpen: () => { clearTimeout(pairTimer); setMirrorState("mirrorConnected"); sendMirror(true); },   // einmal benutzt: der Code ist verbraucht
+      onClose: () => { if (mirrorState.key !== "mirrorPreparing") setMirrorState("mirrorClosed"); },
+    });
+  } catch (error) { setMirrorState("mirrorError", error.message); return; }
+  const link = new URL("view.html", location.href);
+  link.hash = "o=" + mirror.code;
+  $("mirrorLink").value = link.href;
+  try { $("mirrorQr").innerHTML = Mirror.qrSvg(link.href); } catch { /* Link zu lang für einen QR-Code: der Link bleibt kopierbar */ }
+  setMirrorState("mirrorWaiting");
+  const mine = mirror;
+  pairTimer = setTimeout(() => {   // Verfall, solange noch niemand verbunden ist
+    if (mirror === mine && !mine.open) { mine.close(); mirror = null; $("mirrorQr").innerHTML = ""; $("mirrorLink").value = ""; setMirrorState("mirrorExpired"); }
+  }, PAIR_TTL_MS);
+}
+
+$("mirrorBtn").addEventListener("click", () => {
+  $("mirrorBox").hidden = false;
+  if (!mirror) startPairing(); else updateMirrorUi();
+});
+$("mirrorEach").checked = (() => { try { return localStorage.getItem("meetupapp.mirrorEach") !== "0"; } catch { return true; } })();   // Standard: an
+$("mirrorEach").addEventListener("change", () => { try { localStorage.setItem("meetupapp.mirrorEach", $("mirrorEach").checked ? "1" : "0"); } catch {} });
+$("mirrorClose").addEventListener("click", () => { $("mirrorBox").hidden = true; });
+$("mirrorReset").addEventListener("click", startPairing);
+$("mirrorCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("mirrorLink").value); } catch { $("mirrorLink").select(); document.execCommand?.("copy"); }
+  $("mirrorCopy").textContent = t("copied"); setTimeout(() => { $("mirrorCopy").textContent = t("copy"); }, 1500);
+});
+$("mirrorConnect").addEventListener("click", async () => {
+  const code = answerFrom($("mirrorAnswer").value);
+  if (!code || !mirror) { setMirrorState("mirrorError", t("mirrorBadCode")); return; }
+  setMirrorState("mirrorConnecting");
+  try { await mirror.accept(code); } catch { setMirrorState("mirrorError", t("mirrorBadCode")); return; }
+  setTimeout(() => { if (mirror && !mirror.open && mirrorState.key === "mirrorConnecting") setMirrorState("mirrorError", t("mirrorTimeout")); }, 20000);
+});
 
 // QR-Code zum Repository (vorab erzeugt, ECC M); erscheint beim Klick auf den Titel, Klick oder Esc schließt ihn
 const REPO_QR = ["111111100100011101010111001111111", "100000100011011110101001101000001", "101110100001010000101111001011101", "101110100001011111111111001011101", "101110100111111000111000101011101", "100000101000111111010000001000001", "111111101010101010101010101111111", "000000000001101111100111000000000", "100101101100111000000111010100000", "110111001010111011101100111100011", "111001111001011000111000101110111", "101011010001010110100110011011001", "100101101010001110101011011101011", "010111011110001101101000101010111", "011100100100111111010101111110010", "101000011000111011001101001000010", "010100100101000101001110101010010", "011010000010100011100001110101010", "100111100100001011000100101000111", "000110000101010100011011110100000", "001100101100110101011001010000010", "011011001011100101010100111000111", "111000110101111011110100001100001", "010110001101101100111110000011011", "101100100110111011001100111110010", "000000001011000001110110100011011", "111111100111101001101010101011110", "100000101001100111111110100010001", "101110100110100000101000111111011", "101110101010000110110011001010010", "101110100100111110011100000011101", "100000100100010001011101110000000", "111111101011100110010100111011010"];
