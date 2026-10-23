@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meetup Nametag App</title>
+<style>
+  :root { --bg:#f5f5f4; --fg:#1c1917; --card:#fff; --line:#d6d3d1; --accent:#c8102e; --on-accent:#fff; --muted:#78716c; color-scheme:light; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#1c1917; --fg:#f5f5f4; --card:#292524; --line:#44403c; --accent:#ff5a72; --on-accent:#2b0007; --muted:#a8a29e; color-scheme:dark; }
+  }
+  :root[data-theme="dark"] { --bg:#1c1917; --fg:#f5f5f4; --card:#292524; --line:#44403c; --accent:#ff5a72; --on-accent:#2b0007; --muted:#a8a29e; color-scheme:dark; }
+  :root { --accent-soft:color-mix(in srgb, var(--accent) 14%, transparent); --accent-mid:color-mix(in srgb, var(--accent) 30%, transparent); --accent-edge:color-mix(in srgb, var(--accent) 45%, transparent); }
+  * { box-sizing: border-box; }
+  input[type=checkbox] { accent-color: var(--accent); }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, sans-serif; }
+  main { max-width:880px; margin:0 auto; padding:24px 16px; display:grid; gap:24px; grid-template-columns:1fr; }
+  .people, .settings { margin-top:14vh; }   /* untere Boxen etwas tiefer, damit sie beim Öffnen nicht sofort im Blick sind */
+  .col { display:contents; }   /* schmal: alles untereinander, Reihenfolge per order */
+  form { order:1; } .preview { order:2; } .settings { order:3; } .people { order:4; }
+  @media (min-width: 760px) {
+    main { grid-template-columns: 1fr 420px; align-items:stretch; }   /* stretch: Boxen einer Reihe sind gleich hoch */
+    .head { grid-row:1; }
+    form { order:0; grid-column:1; grid-row:2; }
+    .preview { order:0; grid-column:2; grid-row:2; }
+    .people { order:0; grid-column:1; grid-row:3; }
+    .settings { order:0; grid-column:2; grid-row:3; }
+  }
+  .head { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  #theme { width:auto; margin:0; padding:6px 12px; font-size:1.1rem; background:transparent; color:var(--fg); border:1px solid var(--line); }
+  h1 { grid-column:1/-1; margin:0; font-size:1.4rem; }
+  .settings { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .settings label:first-child { margin-top:0; }
+  form, .preview { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  label { display:block; font-weight:600; margin:12px 0 4px; }
+  label:first-child { margin-top:0; }
+  input, textarea { width:100%; padding:10px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; }
+  textarea { font-family: Consolas, "Cascadia Mono", ui-monospace, monospace; min-height:90px; resize:vertical; }
+  .hint { color:var(--muted); font-size:.85rem; margin-top:4px; }
+  button { margin-top:16px; width:100%; padding:12px; font:inherit; font-weight:600; border:0; border-radius:8px; background:var(--accent); color:var(--on-accent); cursor:pointer; }
+  button:disabled { opacity:.5; cursor:wait; }
+  .preview { text-align:center; }
+  /* Dark Mode: Vorschau mit gedämpftem Weiß statt grellem Weiß, Schrift bleibt schwarz. Nur Anzeige, gedruckt wird unverändert. */
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) canvas { filter:brightness(.78); } }
+  :root[data-theme="dark"] canvas { filter:brightness(.78); }
+  canvas { max-width:100%; image-rendering:pixelated; border:1px dashed var(--line); background:#fff; }
+  .people { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .people h2 { margin:0 0 8px; font-size:1.05rem; }
+  .people input[type=file] { margin-bottom:8px; }
+  .name-row { display:flex; gap:8px; align-items:stretch; }
+  .name-row input#name { flex:1; min-width:0; }
+  .chip.two { padding:0 8px; font-size:.7rem; line-height:1.2; }
+  .chip.check { padding:0 12px; font-size:1.4rem; }
+  .chip.check[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }   /* abgehakt: kräftig */
+  .chip.check:disabled { opacity:.35; cursor:default; }
+  .chip { width:auto; margin:0; padding:0 10px; font:inherit; font-size:.8rem; font-weight:600; line-height:1.1; white-space:nowrap; cursor:pointer;
+          background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:8px; }
+  .chip[aria-pressed="true"] { background:var(--accent-mid); border-color:var(--accent); color:var(--fg); }
+  .rolls { display:flex; flex-wrap:nowrap; gap:4px; margin-top:8px; }
+  .rolls button { width:auto; margin:0; padding:6px 8px; white-space:nowrap; font-size:1.2rem; line-height:1.2; background:var(--accent-soft); color:var(--fg); border:1px solid var(--accent-edge); }
+  .rolls button:hover:not(:disabled) { background:var(--accent-mid); }
+  .rolls .pair { display:inline-flex; align-items:center; }
+  .rolls .pair span { margin-left:-.6em; }   /* jeder weitere Würfel überlappt den vorigen */
+  .rolls .pair span:first-child { margin-left:0; transform:rotate(-12deg); }
+  .rolls .pair span:nth-child(2) { transform:rotate(10deg); }
+  .rolls .pair span:nth-child(3) { transform:rotate(-6deg); }
+  .rolls #greetingBack { margin-left:auto; }   /* Zurück und Leeren ganz rechts */
+  .rolls button:disabled { opacity:.35; cursor:default; }   /* ganz rechts */
+  .rolls #genderF { margin-right:14px; }   /* Abstand zwischen Mann/Frau und den Würfeln */
+  .rolls button.toggle { background:transparent; color:var(--fg); border:1px solid var(--line); }
+  .rolls button.toggle[aria-pressed="true"] { background:var(--accent-mid); color:var(--fg); border-color:var(--accent); }
+  #checklist { margin-top:12px; }
+  .listbtns { display:flex; gap:8px; flex-wrap:wrap; }
+  .listbtns button { width:auto; margin:0; padding:6px 12px; background:transparent; color:var(--fg); border:1px solid var(--line); font-size:.85rem; }
+  #list { list-style:none; margin:8px 0; padding:0; max-height:320px; overflow:auto; border:1px solid var(--line); border-radius:8px; }
+  #list li { padding:6px 10px; border-bottom:1px solid var(--line); }
+  #list li:last-child { border-bottom:0; }
+  #list label { display:flex; gap:8px; align-items:center; margin:0; font-weight:400; cursor:pointer; }
+  #list input { width:auto; }
+  #list li.done label { color:var(--muted); text-decoration:line-through; }
+  .preview { display:flex; flex-direction:column; align-items:center; }
+  .preview #print { flex:1; width:100%; min-height:90px; margin-top:12px; font-size:1.8rem; letter-spacing:.02em; order:3; }   /* riesig: füllt die Box bis nach unten */
+  .preview #status { order:2; }
+  #status { margin-top:12px; min-height:1.4em; color:var(--muted); font-size:.9rem; }
+  #status.err { color:#dc2626; }
+</style>
+</head>
+<body>
+<main>
+  <div class="head"><h1>Meetup Nametag App</h1><button id="theme" type="button" title="Hell / Dunkel umschalten" aria-label="Darstellung umschalten">🌙</button></div>
+
+  <div class="col">
+  <form id="form" autocomplete="off">
+    <label for="title">Titeltext</label>
+    <input id="title" value="" placeholder="Software Architecture Meetup Nürnberg">
+
+    <label for="greeting">Zwischenzeile (optional)</label>
+    <input id="greeting" value="" placeholder="z. B. Hallo, ich bin">
+    <div class="rolls">
+      <button id="genderM" type="button" class="toggle" aria-pressed="false" title="Männliche Form (Großartiger)" aria-label="Mann">👨</button>
+      <button id="genderF" type="button" class="toggle" aria-pressed="false" title="Weibliche Form (Großartige)" aria-label="Frau">👩</button>
+      <button id="dice" type="button" title="Zufälliges positives Adjektiv" aria-label="Ein Adjektiv würfeln">🎲</button>
+      <button id="dice2" type="button" title="Zwei zufällige positive Adjektive" aria-label="Zwei Adjektive würfeln"><span class="pair"><span>🎲</span><span>🎲</span></span></button>
+      <button id="dice3" type="button" title="Drei zufällige positive Adjektive" aria-label="Drei Adjektive würfeln"><span class="pair"><span>🎲</span><span>🎲</span><span>🎲</span></span></button>
+      <button id="greetingBack" type="button" class="toggle" title="Vorherige Zwischenzeile zurückholen" aria-label="Zurück" disabled>↩️</button>
+      <button id="greetingClear" type="button" class="toggle" title="Zwischenzeile leeren" aria-label="Zwischenzeile leeren">🗑️</button>
+    </div>
+
+    <label for="name">Name (groß) – für die Suche auch Nachname möglich</label>
+    <div class="name-row">
+      <input id="name" list="people" value="" placeholder="Name eintippen oder aus der Liste wählen">
+      <button type="button" id="checkOff" class="chip check" aria-pressed="false" title="Diese Person in der Teilnehmerliste abhaken (ohne zu drucken)" aria-label="In der Liste abhaken">☐</button>
+      <button type="button" id="firstOnly" class="chip two" aria-pressed="true" title="Nur das erste Wort des Namens drucken (an/aus)">Nur<br>Vorname</button>
+    </div>
+
+    <label for="tags">Hashtags</label>
+    <textarea id="tags" placeholder="#java #architektur #docs-as-code"></textarea>
+    <div class="hint">Getrennt durch Leerzeichen, Komma oder Zeilenumbruch. Das <code>#</code> wird bei Bedarf ergänzt.</div>
+  </form>
+
+  <section class="people">
+    <h2>Teilnehmerliste</h2>
+    <input type="file" id="file" accept=".csv,.tsv,.txt,text/csv,text/plain">
+    <div class="hint" id="listInfo">CSV-Export von Meetup hochladen (oder eine Textdatei mit einem Namen pro Zeile). Danach schlägt das Namensfeld beim Tippen Namen vor, und gedruckte Namen werden abgehakt. Die Liste bleibt im Browser gespeichert.</div>
+    <div id="checklist" hidden>
+      <ul id="list"></ul>
+      <div class="listbtns">
+        <button type="button" id="download" title="Liste mit Spalte „Gedruckt“ als CSV speichern">⬇ CSV herunterladen</button>
+        <button type="button" id="reset">Haken zurücksetzen</button>
+      </div>
+      <div class="hint">Die Haken liegen nur in diesem Browser. Zum Sichern oder für einen anderen Rechner: herunterladen und die Datei später wieder oben hochladen, die Haken kommen dann mit zurück.</div>
+    </div>
+  </section>
+  </div>
+
+  <div class="col">
+  <div class="preview">
+    <canvas id="canvas"></canvas>
+    <button id="print" type="submit" form="form">Drucken</button>
+    <div id="status"></div>
+  </div>
+
+  <section class="settings">
+    <label for="length">Etikettenlänge (mm, Papier läuft quer)</label>
+    <input id="length" type="number" min="25" max="100" step="1" value="80" disabled>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="autoLength" checked style="width:auto"> Länge automatisch aus dem Inhalt berechnen</label>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="flip" style="width:auto"> Drehrichtung umkehren (180°)</label>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="rerollAfterPrint" checked style="width:auto"> Nach jedem Druck neu würfeln</label>
+
+
+
+    <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px">Name und Hashtags leeren</button>
+  </section>
+  </div>
+
+  <datalist id="people"></datalist>
+</main>
+
+<script>
+"use strict";
+
+// ---------- Etikett zeichnen ----------
+const WIDTH = 384, MARGIN = 10, DOTS_PER_MM = 8;   // WIDTH = Druckbreite des Druckers in Punkten
+const FONT_SANS = '"Arial Black", "Segoe UI", Arial, sans-serif';
+const FONT_TEXT = 'Arial, "Segoe UI", sans-serif';
+const FONT_CODE = 'Consolas, "Cascadia Mono", "Courier New", monospace';
+
+const $ = id => document.getElementById(id);
+const canvas = $("canvas");                       // Vorschau (liegend)
+const printSource = document.createElement("canvas"); // Druckbild (gedreht)
+
+function wrapWords(ctx, text, maxWidth) {
+  const lines = [];
+  let line = "";
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const trial = line ? line + " " + word : word;
+    if (!line || ctx.measureText(trial).width <= maxWidth) line = trial;
+    else { lines.push(line); line = word; }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+// Größte Schrift (max..min), bei der der Text in höchstens maxLines Zeilen passt.
+function fitName(ctx, text, maxWidth, maxSize = 84, minSize = 28, maxLines = 3) {
+  for (let size = maxSize; size >= minSize; size -= 2) {
+    ctx.font = `${size}px ${FONT_SANS}`;
+    const lines = wrapWords(ctx, text, maxWidth);
+    const widest = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
+    if (lines.length <= maxLines && widest <= maxWidth) return { size, lines };
+  }
+  ctx.font = `${minSize}px ${FONT_SANS}`;
+  return { size: minSize, lines: wrapWords(ctx, text, maxWidth) };
+}
+
+function parseTags(raw) {
+  return raw.split(/[\s,]+/).filter(Boolean).map(t => (t.startsWith("#") ? t : "#" + t));
+}
+
+// Aus "Dr. Anna Maria Müller" wird "Anna"; bei "Müller, Anna" wird "Anna".
+const firstOnly = () => $("firstOnly").getAttribute("aria-pressed") === "true";
+const setFirstOnly = on => $("firstOnly").setAttribute("aria-pressed", String(on));
+
+function firstName(full) {
+  full = full.trim();
+  if (full.includes(",")) full = full.split(",").slice(1).join(" ").trim();
+  const words = full.split(/\s+/).filter(w => !/^(dr|prof|mr|mrs|ms)\.?$/i.test(w));
+  return words[0] || full;
+}
+function displayName(full) {
+  return firstOnly() ? firstName(full) : full.trim();
+}
+
+// Etikett quer: Das Layout entsteht liegend (Länge x 384 px) und wird zum Drucken um 90° gedreht,
+// sodass der Text entlang des Papiervorschubs läuft.
+function drawLabel() {
+  const title = $("title").value.trim();
+  const greeting = $("greeting").value.trim();
+  const name = displayName($("name").value);
+  const tags = parseTags($("tags").value);
+  const probe = document.createElement("canvas").getContext("2d");
+  const TITLE_INSET = 14;   // Titel etwas weiter vom oberen Rand weg
+  const titleSize = 26, titleLineH = 32, greetSize = 36, greetLineH = 44;
+  const tagSize = 30, chipPadX = 6, chipH = 38, chipGap = 14;
+
+  // Misst Titel, Name und Hashtags für eine gegebene Etikettenlänge (in Punkten).
+  function measure(lengthPx) {
+    const inner = lengthPx - 2 * MARGIN;
+    probe.font = `bold ${titleSize}px ${FONT_TEXT}`;
+    const titleLines = title ? wrapWords(probe, title, inner) : [];
+    const titleWidth = Math.max(0, ...titleLines.map(l => probe.measureText(l).width));
+
+    probe.font = `${greetSize}px ${FONT_TEXT}`;
+    const greetLines = greeting ? wrapWords(probe, greeting, inner) : [];
+    const greetWidth = Math.max(0, ...greetLines.map(l => probe.measureText(l).width));
+
+    probe.font = `${tagSize}px ${FONT_CODE}`;
+    const rows = [];
+    let row = [], rowW = 0;
+    for (const tag of tags) {
+      const w = Math.min(inner, Math.ceil(probe.measureText(tag).width) + 2 * chipPadX);
+      if (row.length && rowW + chipGap + w > inner) { rows.push(row); row = []; rowW = 0; }
+      row.push({ tag, w });
+      rowW += (row.length > 1 ? chipGap : 0) + w;
+    }
+    if (row.length) rows.push(row);
+    const rowsWidth = Math.max(0, ...rows.map(r => r.reduce((s, c) => s + c.w, 0) + chipGap * (r.length - 1)));
+
+    // Name so groß wie möglich, solange alles in die 384 px Höhe passt.
+    const titleHeight = titleLines.length ? TITLE_INSET + titleLines.length * titleLineH + 8 : 0;
+    const greetHeight = greetLines.length * greetLineH;
+    const fixedHeight = 2 * MARGIN + titleHeight + greetHeight + rows.length * (chipH + chipGap);
+    let fit = { size: 0, lines: [] };
+    // Bevorzugt eine Zeile (lange Namen werden dafür kleiner), erst unter 48 px wird umbrochen.
+    if (name) {
+      search: for (const [maxLines, minSize] of [[1, 48], [2, 28]]) {
+        for (let maxSize = 120; maxSize >= minSize; maxSize -= 4) {
+          fit = fitName(probe, name, inner, maxSize, minSize, maxLines);
+          if (fit.lines.length <= maxLines &&
+              fixedHeight + fit.lines.length * Math.round(fit.size * 1.12) + 14 <= WIDTH) break search;
+        }
+      }
+    }
+    probe.font = `${fit.size}px ${FONT_SANS}`;
+    const nameWidth = Math.max(0, ...fit.lines.map(l => probe.measureText(l).width));
+    const nameLineH = Math.round(fit.size * 1.12);
+    const bodyHeight = greetHeight + rows.length * (chipH + chipGap) + fit.lines.length * nameLineH + (fit.lines.length ? 14 : 0);
+    return { titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight,
+             usedWidth: Math.max(titleWidth, greetWidth, rowsWidth, nameWidth) };
+  }
+
+  // Länge: automatisch aus dem Inhalt (breiteste Zeile + Rand) oder vom Nutzer vorgegeben.
+  const MIN_PX = 25 * DOTS_PER_MM, MAX_PX = 100 * DOTS_PER_MM;
+  const AUTO_MAX_PX = 100 * DOTS_PER_MM;   // längste automatische Länge (mm * 8)
+  let lengthPx, m;
+  if ($("autoLength").checked) {
+    m = measure(AUTO_MAX_PX);   // längere Namen werden kleiner statt das Etikett zu verlängern
+    lengthPx = Math.max(MIN_PX, Math.min(AUTO_MAX_PX, Math.ceil(m.usedWidth) + 2 * MARGIN));
+    m = measure(lengthPx);
+    $("length").value = Math.round(lengthPx / DOTS_PER_MM);
+  } else {
+    lengthPx = Math.max(MIN_PX, Math.min(MAX_PX, Math.round((parseFloat($("length").value) || 80) * DOTS_PER_MM)));
+    m = measure(lengthPx);
+  }
+  $("length").disabled = $("autoLength").checked;
+  const { titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight } = m;
+
+  const layout = document.createElement("canvas");
+  layout.width = lengthPx;
+  layout.height = WIDTH;
+  const lctx = layout.getContext("2d");
+  lctx.fillStyle = "#fff";
+  lctx.fillRect(0, 0, lengthPx, WIDTH);
+  lctx.fillStyle = "#000";
+  lctx.textAlign = "center";
+  lctx.textBaseline = "middle";
+
+  // Der Titel (Meetup-Name) steht immer ganz oben; der Rest wird im verbleibenden Platz zentriert.
+  let y = MARGIN + (titleLines.length ? TITLE_INSET : 0);
+  lctx.font = `bold ${titleSize}px ${FONT_TEXT}`;
+  for (const line of titleLines) {
+    lctx.fillText(line, lengthPx / 2, y + titleLineH / 2);
+    y += titleLineH;
+  }
+  y = MARGIN + titleHeight;
+  y += Math.max(0, (WIDTH - MARGIN - y - bodyHeight) / 2);
+
+  lctx.font = `${greetSize}px ${FONT_TEXT}`;
+  for (const line of greetLines) {
+    lctx.fillText(line, lengthPx / 2, y + greetLineH / 2);
+    y += greetLineH;
+  }
+
+  lctx.font = `${fit.size}px ${FONT_SANS}`;
+  for (const line of fit.lines) {
+    lctx.fillText(line, lengthPx / 2, y + nameLineH / 2);
+    y += nameLineH;
+  }
+  if (fit.lines.length) y += 14;
+
+  lctx.font = `${tagSize}px ${FONT_CODE}`;
+  for (const r of rows) {
+    const total = r.reduce((s, c) => s + c.w, 0) + chipGap * (r.length - 1);
+    let x = (lengthPx - total) / 2;
+    for (const chip of r) {
+      lctx.fillText(chip.tag, x + chip.w / 2, y + chipH / 2 + 1, chip.w - 2 * chipPadX / 2);
+      x += chip.w + chipGap;
+    }
+    y += chipH + chipGap;
+  }
+
+  // Vorschau: liegend, so wie man das Etikett liest.
+  canvas.width = lengthPx;
+  canvas.height = WIDTH;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(layout, 0, 0);
+  toOneBit(ctx);
+
+  // Druckbild: um 90° gedreht (Layout-x läuft entlang des Papiers, nach unten).
+  printSource.width = WIDTH;
+  printSource.height = lengthPx;
+  const pctx = printSource.getContext("2d");
+  pctx.fillStyle = "#fff";
+  pctx.fillRect(0, 0, WIDTH, lengthPx);
+  if ($("flip").checked) { pctx.translate(0, lengthPx); pctx.rotate(-Math.PI / 2); }
+  else { pctx.translate(WIDTH, 0); pctx.rotate(Math.PI / 2); }
+  pctx.drawImage(canvas, 0, 0);
+  pctx.setTransform(1, 0, 0, 1, 0, 0);
+  toOneBit(pctx);
+}
+
+// Der Drucker kennt nur Schwarz/Weiß: harter Schwellwert, damit die Vorschau genau zeigt, was gedruckt wird.
+function toOneBit(ctx) {
+  const image = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+  const d = image.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    d[i] = d[i + 1] = d[i + 2] = lum < 128 ? 0 : 255;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(image, 0, 0);
+}
+
+// Eingaben und Optionen bleiben beim Neuladen erhalten (localStorage; ohne Zugriff startet die Seite leer).
+const FIELDS_KEY = "meetupapp.fields";
+const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length"];
+const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
+function saveFields() {
+  try {
+    const state = { gender, rollCount };
+    for (const id of TEXT_FIELDS) state[id] = $(id).value;
+    for (const id of CHECK_FIELDS) state[id] = $(id).checked;
+    localStorage.setItem(FIELDS_KEY, JSON.stringify(state));
+  } catch {}
+}
+
+function render() {
+  drawLabel();
+  saveFields();
+}
+
+// ---------- Cat-Printer-Protokoll (portiert aus ble_print.py) ----------
+function crc8(data) {
+  let crc = 0;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let i = 0; i < 8; i++) crc = (crc & 0x80) ? ((crc << 1) ^ 0x07) & 0xff : (crc << 1) & 0xff;
+  }
+  return crc;
+}
+
+function packet(cmd, data = []) {
+  const d = Uint8Array.from(data);
+  return [0x51, 0x78, cmd, 0x00, d.length & 0xff, d.length >> 8, ...d, crc8(d), 0xff];
+}
+
+function buildJob(imageData, { energy = 0x0040, speed = 24, quality = 0x32, tailBd = 8 } = {}) {
+  const out = [];
+  out.push(...packet(0xA3, [0x00]));
+  out.push(...packet(0xA4, [quality]));
+  out.push(...packet(0xAF, [energy >> 8, energy & 0xff]));
+  out.push(...packet(0xBE, [0x01]));
+  if (speed != null) out.push(...packet(0xBD, [speed]));
+  out.push(...packet(0xA6, [0xAA, 0x55, 0x17, 0x38, 0x44, 0x5F, 0x5F, 0x5F, 0x44, 0x38, 0x2C]));
+  const { data, width, height } = imageData;
+  for (let y = 0; y < height; y++) {
+    const row = new Uint8Array(WIDTH / 8);
+    for (let x = 0; x < WIDTH; x++) {
+      const i = (y * width + x) * 4;
+      const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      if (lum < 128) row[x >> 3] |= 1 << (x & 7); // linkestes Pixel = niedrigstes Bit
+    }
+    out.push(...packet(0xA2, row));
+  }
+  if (tailBd != null) out.push(...packet(0xBD, [tailBd]));
+  for (let i = 0; i < 3; i++) out.push(...packet(0xA1, [0x30, 0x00]));
+  out.push(...packet(0xA6, [0xAA, 0x55, 0x17, 0, 0, 0, 0, 0, 0, 0, 0x17]));
+  out.push(...packet(0xA3, [0x00]));
+  return Uint8Array.from(out);
+}
+
+// ---------- Bluetooth ----------
+const SERVICE = 0xAE30;
+const TX_UUID = "0000ae01-0000-1000-8000-00805f9b34fb";
+// Schnellmodus wie in der Cat-Printer-App / im Primer-Server: Tempo (0xBD) 24 = schnellste Stufe, Schwärzung 0x4000
+// (als 0x0040 geschrieben, weil die Bytes so abgelegt werden). rowSeconds/feedSeconds schätzen die Druckdauer,
+// nach der "Gedruckt" gemeldet wird.
+const PRINT = { speed: 24, energy: 0x0040, quality: 0x32, tail: 8, chunk: 100, delay: 20, rowSeconds: 0.0114, feedSeconds: 0.5 };
+
+let device = null, txChar = null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function ensureConnected() {
+  if (txChar && device?.gatt.connected) return txChar;
+  if (!device) {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "X6h" }],
+      optionalServices: [SERVICE],
+    });
+    device.addEventListener("gattserverdisconnected", () => { txChar = null; });
+  }
+  const server = await device.gatt.connect();
+  const service = await server.getPrimaryService(SERVICE);
+  txChar = await service.getCharacteristic(TX_UUID);
+  return txChar;
+}
+
+async function printCanvas() {
+  const image = printSource.getContext("2d").getImageData(0, 0, printSource.width, printSource.height);
+  const mode = PRINT;
+  const data = buildJob(image, { energy: mode.energy, speed: mode.speed, quality: mode.quality, tailBd: mode.tail });
+  const char = await ensureConnected();
+  const started = performance.now();
+  for (let i = 0; i < data.length; i += mode.chunk) {
+    await char.writeValueWithoutResponse(data.slice(i, i + mode.chunk));
+    await sleep(mode.delay);
+  }
+  const sent = (performance.now() - started) / 1000;
+  status(`Gesendet in ${sent.toFixed(1)} s (${data.length} Bytes) – warte auf den Druck …`);
+  // Der Drucker meldet nicht, wann er fertig ist: geschätzte Druckdauer abwarten.
+  const remaining = started + (printSource.height * mode.rowSeconds + mode.feedSeconds) * 1000 - performance.now();
+  if (remaining > 0) await sleep(remaining);
+  return { sent, total: (performance.now() - started) / 1000, rows: printSource.height };
+}
+
+// ---------- UI ----------
+const status = (text, error = false) => { $("status").textContent = text; $("status").className = error ? "err" : ""; };
+
+$("form").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!navigator.bluetooth) return status("Web Bluetooth fehlt – bitte Chrome oder Edge über localhost/HTTPS nutzen.", true);
+  $("print").disabled = true;
+  try {
+    status("Verbinde und drucke …");
+    const result = await printCanvas();
+    const printed = matchPerson();
+    if (printed) { printed.done = true; save(); renderList(); }
+    setFirstOnly(true);   // nächstes Etikett wieder nur mit Vornamen
+    render();
+    status(`Gedruckt. Senden ${result.sent.toFixed(1)} s, gesamt ${result.total.toFixed(1)} s, ${result.rows} Zeilen.`);
+    if ($("rerollAfterPrint").checked && $("greeting").value.trim()) rollGreeting(rollCount);   // nur wenn die Zwischenzeile benutzt wird
+  } catch (error) {
+    if (error.name === "NotFoundError") status("Kein Drucker gewählt.", true);
+    else status(`Fehler: ${error.message}`, true);
+  } finally {
+    $("print").disabled = false;
+  }
+});
+
+// ---------- Teilnehmerliste ----------
+const STORE_KEY = "meetupapp.people";
+let people = [];   // { name, done }
+
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(people)); } catch {} }
+function load() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORE_KEY)) || [];
+    people = stored.map(p => (typeof p === "string" ? { name: p, done: false } : p));
+  } catch { people = []; }
+}
+
+// Minimaler CSV-Parser (Anführungszeichen, Trennzeichen , ; Tab werden erkannt)
+function parseCsv(text) {
+  text = text.replace(/^﻿/, "");
+  const first = text.split(/\r?\n/, 1)[0];
+  const delim = [",", ";", "\t"].map(d => [d, first.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const rows = [];
+  let row = [], cell = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else cell += c;
+    } else if (c === '"') quoted = true;
+    else if (c === delim) { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); cell = "";
+      if (row.some(v => v.trim())) rows.push(row);
+      row = [];
+    } else cell += c;
+  }
+  row.push(cell);
+  if (row.some(v => v.trim())) rows.push(row);
+  return rows;
+}
+
+function extractNames(text) {
+  const rows = parseCsv(text);
+  if (!rows.length) return [];
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const find = re => header.findIndex(h => re.test(h));
+  let names;
+  const nameCol = find(/^(name|member name|mitgliedsname|teilnehmer|vollständiger name|full name)$/);
+  const firstCol = find(/^(vorname|first name|first)$/);
+  const lastCol = find(/^(nachname|last name|last|familienname)$/);
+  if (nameCol >= 0) names = rows.slice(1).map(r => r[nameCol]);
+  else if (firstCol >= 0 && lastCol >= 0) names = rows.slice(1).map(r => `${r[firstCol] || ""} ${r[lastCol] || ""}`);
+  else if (rows[0].length === 1) names = rows.map(r => r[0]);       // reine Namensliste
+  else {
+    const col = find(/name/);                                       // irgendeine Spalte mit "name"
+    names = col >= 0 ? rows.slice(1).map(r => r[col]) : rows.map(r => r[0]);
+  }
+  const seen = new Set();
+  return names.map(n => (n || "").replace(/\s+/g, " ").trim())
+    .filter(n => n && !seen.has(n.toLowerCase()) && seen.add(n.toLowerCase()));
+}
+
+// Namen, die in einer heruntergeladenen Liste als gedruckt markiert sind (Spalten "Name" und "Gedruckt")
+function doneNamesFromCsv(text) {
+  const rows = parseCsv(text);
+  if (rows.length < 2) return [];
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const nameCol = header.indexOf("name"), doneCol = header.indexOf("gedruckt");
+  if (nameCol < 0 || doneCol < 0) return [];
+  return rows.slice(1).filter(r => /^(ja|x|1|true|✓)$/i.test((r[doneCol] || "").trim())).map(r => (r[nameCol] || "").replace(/\s+/g, " ").trim());
+}
+
+function downloadList() {
+  const quote = v => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = ["Name;Gedruckt", ...people.map(p => `${quote(p.name)};${p.done ? "Ja" : "Nein"}`)];
+  const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `teilnehmer-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+// Person aus der Liste zum getippten Namen: voller Name genau, sonst ein (noch offener) passender Vorname
+function matchPerson() {
+  const typed = $("name").value.trim().toLowerCase();
+  if (!typed) return null;
+  const exact = people.find(p => p.name.toLowerCase() === typed);
+  if (exact) return exact;
+  const byFirst = people.filter(p => firstName(p.name).toLowerCase() === typed);
+  return byFirst.find(p => !p.done) || byFirst[0] || null;
+}
+
+function updateCheckOff() {
+  const person = matchPerson();
+  const done = Boolean(person?.done);
+  $("checkOff").setAttribute("aria-pressed", String(done));
+  $("checkOff").textContent = done ? "☑" : "☐";
+  $("checkOff").disabled = !person;
+}
+
+function renderList() {
+  $("people").replaceChildren(...people.map(p => {
+    const option = document.createElement("option");
+    option.value = p.name;
+    if (p.done) option.label = `✓ ${p.name}`;
+    return option;
+  }));
+  $("list").replaceChildren(...people.map(p => {
+    const li = document.createElement("li");
+    li.className = p.done ? "done" : "";
+    const label = document.createElement("label");
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = p.done;
+    box.addEventListener("change", () => { p.done = box.checked; save(); renderList(); });
+    label.title = p.name;   // voller Name als Tooltip
+    label.append(box, firstName(p.name));
+    li.append(label);
+    return li;
+  }));
+  $("checklist").hidden = !people.length;
+  updateCheckOff();
+  if (people.length) {
+    const done = people.filter(p => p.done).length;
+    $("listInfo").textContent = `${people.length} Teilnehmer, ${done} gedruckt – im Namensfeld tippen zum Suchen.`;
+  }
+}
+
+$("file").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  const names = extractNames(text);
+  if (!names.length) { $("listInfo").textContent = "Keine Namen gefunden – hat die Datei eine Spalte „Name“?"; return; }
+  const done = new Set(people.filter(p => p.done).map(p => p.name));
+  for (const name of doneNamesFromCsv(text)) done.add(name);   // Haken aus einer früher heruntergeladenen Liste
+  people = names.map(name => ({ name, done: done.has(name) }));
+  save(); renderList();
+});
+$("checkOff").addEventListener("click", () => {
+  const person = matchPerson();
+  if (!person) return;
+  person.done = !person.done;   // von Hand abhaken oder wieder öffnen
+  save(); renderList();
+});
+$("name").addEventListener("input", updateCheckOff);
+$("download").addEventListener("click", downloadList);
+$("reset").addEventListener("click", () => { people.forEach(p => { p.done = false; }); save(); renderList(); });
+
+for (const id of ["title", "greeting", "name", "tags"]) $(id).addEventListener("input", render);
+$("firstOnly").addEventListener("click", () => { setFirstOnly(!firstOnly()); render(); });
+$("flip").addEventListener("change", render);
+// Zufällige positive Zwischenzeilen: Adjektiv (gegendert) in zwei Formen, z. B. "Großartige(r)" oder "Der/Die Phantastische".
+const ADJECTIVES = ["Großartige", "Phantastische", "Fantastische", "Geniale", "Wunderbare", "Brillante", "Tolle",
+  "Fabelhafte", "Grandiose", "Herausragende", "Sagenhafte", "Einzigartige", "Inspirierende", "Kluge", "Mutige",
+  "Kreative", "Unschlagbare", "Strahlende", "Beeindruckende", "Erstaunliche", "Phänomenale", "Glänzende",
+  "Charmante", "Mitreißende", "Begeisterte", "Unglaubliche", "Geschätzte", "Liebenswerte", "Legendäre",
+  "Unvergleichliche", "Bezaubernde", "Entzückende", "Faszinierende", "Fesselnde", "Freundliche", "Fröhliche",
+  "Geistreiche", "Humorvolle", "Hilfsbereite", "Herzliche", "Hinreißende", "Lebendige", "Leidenschaftliche",
+  "Motivierende", "Neugierige", "Optimistische", "Außergewöhnliche", "Atemberaubende", "Bemerkenswerte",
+  "Bewundernswerte", "Clevere", "Dynamische", "Eindrucksvolle", "Energiegeladene", "Erfinderische", "Exzellente",
+  "Famose", "Gewitzte", "Glückliche", "Hervorragende", "Ideenreiche", "Innovative", "Kompetente", "Lässige",
+  "Lustige", "Magische", "Meisterhafte", "Mitfühlende", "Prächtige", "Reizende", "Schlagfertige", "Sympathische",
+  "Talentierte", "Unerschrockene", "Unverwüstliche", "Vielseitige", "Wertvolle", "Zauberhafte", "Zuverlässige",
+  "Unwiderstehliche", "Vortreffliche", "Verblüffende", "Scharfsinnige", "Bärenstarke"];
+// Schreibvarianten desselben Worts ("Phantastische"/"Fantastische") zählen als gleich und kommen nie zusammen vor.
+const sameWord = (x, y) => x.toLowerCase().replace(/ph/g, "f") === y.toLowerCase().replace(/ph/g, "f");
+const pick = list => list[Math.floor(Math.random() * list.length)];
+let rollCount = 1;     // letzter Modus (1-3 Adjektive); "Nach jedem Druck neu würfeln" bleibt dabei
+let gender = null;     // "m", "f" oder null (neutral: "(r)" bzw. "Der/Die")
+
+// Adjektiv in der passenden Form: "Großartiger" / "Großartige" / "Großartige(r)"
+const adjective = a => (gender === "m" ? a + "r" : gender === "f" ? a : a + "(r)");
+const article = () => (gender === "m" ? "Der" : gender === "f" ? "Die" : "Der/Die");
+
+// Die gewürfelten Bestandteile werden gemerkt, damit die Geschlechts-Buttons den Text
+// nur umformen (er/sie) und nicht neu würfeln.
+let lastRoll = null;   // { kind: "adj" | "article" | "list", words: [...] }
+let lastText = "";
+
+function formatRoll(roll) {
+  if (roll.kind === "list") {   // "Großartiger", "Großartiger & Genialer", "Großartiger, Genialer & Mutiger"
+    // nur das erste Adjektiv beginnt groß: "Großartiger, genialer & mutiger"
+    const words = roll.words.map((w, i) => adjective(i ? w[0].toLowerCase() + w.slice(1) : w));
+    return words.length === 1 ? words[0] : `${words.slice(0, -1).join(", ")} & ${words[words.length - 1]}`;
+  }
+  if (roll.kind === "article") return `${article()} ${roll.words[0]}`;
+  return adjective(roll.words[0]);
+}
+
+// Verlauf der Zwischenzeilen, damit man mit ↩️ zum vorigen Wurf zurückkann
+const HISTORY_MAX = 10;   // so viele Zwischenzeilen lassen sich zurückholen
+const history = [];   // { roll, text }
+function updateBack() { $("greetingBack").disabled = history.length === 0; }
+function pushHistory() {
+  const text = $("greeting").value;
+  if (!text.trim() || history.at(-1)?.text === text) return;
+  history.push({ roll: lastRoll, text });
+  if (history.length > HISTORY_MAX) history.shift();   // älteste fliegt raus
+  updateBack();
+}
+
+function showRoll(roll, record = true) {
+  if (record) pushHistory();
+  lastRoll = roll;
+  lastText = formatRoll(roll);
+  $("greeting").value = lastText;
+  render();
+}
+
+function rollGreeting(count = rollCount) {
+  rollCount = count;
+  const current = $("greeting").value;
+  let roll;
+  do {
+    const words = [];
+    while (words.length < count) {   // verschiedene Adjektive
+      const a = pick(ADJECTIVES);
+      if (!words.some(w => sameWord(w, a))) words.push(a);
+    }
+    roll = count > 1 ? { kind: "list", words } : { kind: Math.random() < 0.5 ? "adj" : "article", words };
+  } while (formatRoll(roll) === current);
+  showRoll(roll);
+}
+
+// Von Hand geschriebenen Text umformen: "(r)" -> "r"/"", "Der/Die" -> "Der"/"Die"
+const ADJ_BASE = new Set(ADJECTIVES.map(a => a.toLowerCase()));
+// Grundform ("Großartige") eines Adjektivs aus "Großartige", "Großartiger" oder "Großartige(r)"; sonst null
+function adjectiveBase(tok) {
+  const word = tok.replace(/\(r\)$/, "");
+  const lower = word.toLowerCase();
+  if (ADJ_BASE.has(lower)) return word;
+  if (lower.endsWith("r") && ADJ_BASE.has(lower.slice(0, -1))) return word.slice(0, -1);
+  return null;
+}
+// Ohne Artikel hängt die Endung vom Geschlecht ab: "Großartiger" / "Großartige" / "Großartige(r)"
+function adjectiveForm(tok) {
+  const base = adjectiveBase(tok);
+  if (base === null) return tok;
+  return gender === "m" ? base + "r" : gender === "f" ? base : base + "(r)";
+}
+// Erkennt die Adjektive aus der Liste auch ohne gemerkten Wurf (z. B. nach dem Neuladen oder bei selbst getipptem Text).
+// Nach einem Artikel bleibt das Adjektiv in der Grundform: "Der Tolle", "Die Tolle".
+function convertText(text) {
+  const article = gender === "m" ? "Der" : gender === "f" ? "Die" : "Der/Die";
+  return text.replace(/(?:(Der\/Die|Der|Die)(\s+))?([\p{L}]+(?:\(r\))?)/gu, (all, art, space, tok) => {
+    if (art && adjectiveBase(tok) !== null) return article + space + adjectiveBase(tok);
+    return (art ? art + space : "") + adjectiveForm(tok);
+  });
+}
+
+function setGender(value) {
+  gender = gender === value ? null : value;   // zweiter Klick schaltet zurück auf neutral
+  $("genderM").setAttribute("aria-pressed", String(gender === "m"));
+  $("genderF").setAttribute("aria-pressed", String(gender === "f"));
+  const text = $("greeting").value;
+  if (!text.trim()) { saveFields(); return; }  // leer: nichts würfeln, gilt für den nächsten Wurf
+  if (lastRoll && text === lastText) showRoll(lastRoll, false);   // gewürfelter Text: gleiche Wörter, andere Form
+  else { $("greeting").value = convertText(text); render(); }
+}
+$("genderM").addEventListener("click", () => setGender("m"));
+$("genderF").addEventListener("click", () => setGender("f"));
+$("greetingBack").addEventListener("click", () => {
+  const entry = history.pop();
+  if (!entry) return;
+  lastRoll = entry.roll;
+  lastText = entry.text;
+  $("greeting").value = entry.text;
+  updateBack();
+  render();
+});
+$("greetingClear").addEventListener("click", () => {
+  pushHistory();   // auch nach dem Leeren zurückholbar
+  $("greeting").value = "";
+  lastRoll = null;
+  render();
+});
+$("dice").addEventListener("click", () => rollGreeting(1));
+$("dice2").addEventListener("click", () => rollGreeting(2));
+$("dice3").addEventListener("click", () => rollGreeting(3));
+
+$("clear").addEventListener("click", () => {
+  setFirstOnly(true);
+  $("name").value = "";
+  $("tags").value = "";
+  render();
+  $("name").focus();
+});
+$("length").addEventListener("input", render);
+$("autoLength").addEventListener("change", render);
+// Gespeicherte Eingaben wiederherstellen (vor dem ersten Zeichnen).
+function restoreFields() {
+  let state;
+  try { state = JSON.parse(localStorage.getItem(FIELDS_KEY)) || {}; } catch { state = {}; }
+  for (const id of TEXT_FIELDS) if (typeof state[id] === "string") $(id).value = state[id];
+  for (const id of CHECK_FIELDS) if (typeof state[id] === "boolean") $(id).checked = state[id];
+  if (state.gender === "m" || state.gender === "f") {
+    gender = state.gender;
+    $("genderM").setAttribute("aria-pressed", String(gender === "m"));
+    $("genderF").setAttribute("aria-pressed", String(gender === "f"));
+  }
+  if ([1, 2, 3].includes(state.rollCount)) rollCount = state.rollCount;
+}
+restoreFields();
+
+// Hell/Dunkel: folgt dem System, bis man umschaltet; die Wahl bleibt gespeichert.
+const THEME_KEY = "meetupapp.theme";
+const systemDark = () => matchMedia("(prefers-color-scheme: dark)").matches;
+function applyTheme(theme) {   // "light" | "dark" | null (System)
+  if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
+  const dark = theme ? theme === "dark" : systemDark();
+  $("theme").textContent = dark ? "☀️" : "🌙";
+}
+try { applyTheme(localStorage.getItem(THEME_KEY)); } catch { applyTheme(null); }
+$("theme").addEventListener("click", () => {
+  const next = (document.documentElement.dataset.theme || (systemDark() ? "dark" : "light")) === "dark" ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+});
+load(); renderList();
+render();
+document.fonts?.ready.then(render);
+</script>
+</body>
+</html>
