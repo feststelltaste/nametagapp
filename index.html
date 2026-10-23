@@ -48,6 +48,9 @@
   .roomwarn a:hover mark { text-decoration:underline; }
   .roomwarn mark { background:none; color:var(--fg); font-weight:800; }   /* nur fett, in der normalen Textfarbe (hell: schwarz) */
   .roombtns .roomgo { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600; }
+  .roomhide { display:flex; gap:8px; align-items:center; font-weight:400; font-size:.9rem; margin:10px 0 0; }
+  .roomnote a { color:inherit; }
+  [hidden] { display:none !important; }
   .roomstate { margin-top:10px; padding:8px 10px; border-radius:8px; background:var(--accent-soft); font-size:.9rem; }
   .roomstate.bad { background:rgba(220,38,38,.14); }
   .linkrow { display:flex; gap:8px; }
@@ -283,7 +286,9 @@
       <h2 data-i18n="roomHeading">Open the second screen on another device</h2>
       <div id="roomOff">
         <p data-i18n="roomIntro">With this, a phone or tablet can show the label live: it scans a QR code and follows every change.</p>
-        <p class="roomwarn" data-i18n-html="roomDisclosure">…</p>
+        <p class="roomwarn roomNotice" data-i18n-html="roomDisclosure">…</p>
+        <label class="roomhide roomNotice"><input type="checkbox" id="roomHide" style="width:auto"> <span data-i18n="roomHide">Do not show this notice again</span></label>
+        <p class="roomnote roomLinkOnly" id="roomLinkNote"><a href="https://github.com/feststelltaste/nametagapp#privacy" target="_blank" rel="noopener" data-i18n="roomPrivacyLink">Privacy notes (README)</a></p>
         <div class="roombtns">
           <button type="button" id="roomCancel" data-i18n="cancel">Cancel</button>
           <button type="button" id="roomStart" class="roomgo" data-i18n="roomStart">Start sharing</button>
@@ -296,10 +301,11 @@
             <p data-i18n="roomExplain">Scan the QR code with a phone or tablet. The label then follows live.</p>
             <div class="linkrow"><input id="roomLink" readonly aria-label="Link"><button type="button" id="roomCopy" data-i18n="copy">Copy</button></div>
             <div id="roomState" class="roomstate"></div>
-            <p class="roomnote" data-i18n="roomEach">After each print a new QR code is created; each guest only keeps their own name tag.</p>
+            <p class="roomnote roomLinkOnly" style="margin-top:10px"><a href="https://github.com/feststelltaste/nametagapp#privacy" target="_blank" rel="noopener" data-i18n="roomPrivacyLink">Privacy notes (README)</a></p>
+        <p class="roomnote" data-i18n="roomEach">After each print a new QR code is created; each guest only keeps their own name tag.</p>
           </div>
         </div>
-        <p class="roomwarn" data-i18n-html="roomDisclosure" style="margin-top:14px">…</p>
+        <p class="roomwarn roomNotice" data-i18n-html="roomDisclosure" style="margin-top:14px">…</p>
         <div class="roombtns">
           <button type="button" id="roomStop" data-i18n="roomStop">Stop sharing</button>
           <button type="button" id="roomNew" data-i18n="roomNew">New code</button>
@@ -357,7 +363,7 @@ const T = {
     roomHeading: "Zweiten Bildschirm auf einem anderen Gerät öffnen",
     roomExplain: "Scanne den QR-Code mit einem Handy oder Tablet. Das Etikett läuft dann live mit.",
     roomEach: "Nach jedem Druck entsteht ein neuer QR-Code; jeder Gast behält nur sein eigenes Namensschild.",
-    roomNew: "Neuer Code", roomStop: "Teilen beenden", cancel: "Abbrechen", roomStart: "Teilen starten",
+    roomHide: "Diesen Hinweis nicht mehr anzeigen", roomPrivacyLink: "Hinweise zum Datenschutz (README)", roomNew: "Neuer Code", roomStop: "Teilen beenden", cancel: "Abbrechen", roomStart: "Teilen starten",
     roomIntro: "Damit zeigt ein Handy oder Tablet das Etikett live: Es scannt einen QR-Code und folgt jeder Änderung.",
     roomDisclosure: "<b>Hinweis:</b> Beim Start verbindet sich diese Seite mit dem Drittanbieter <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (sichtbar: deine <mark>IP-Adresse</mark>, die Seitenadresse, deine Browser-Kennung und eine Zufalls-ID). <mark>Etikett-Daten gehen erst raus, wenn ein Gerät den QR-Code geöffnet hat</mark>, dann aber <mark>Ende-zu-Ende verschlüsselt</mark> und vom Dienst <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'><mark>bis zu 12 Stunden</mark> zwischengespeichert</a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details und Datenschutz-Hinweise in der README</a>.",
     roomCount: n => `Heute gesendet: ${n} von etwa 250 Nachrichten (Limit des kostenlosen Dienstes).`, roomLimit: "Limit des kostenlosen Dienstes erreicht. Es geht nach einer Pause oder morgen weiter.",
@@ -399,7 +405,7 @@ const T = {
     roomHeading: "Open the second screen on another device",
     roomExplain: "Scan the QR code with a phone or tablet. The label then follows live.",
     roomEach: "After each print a new QR code is created; each guest only keeps their own name tag.",
-    roomNew: "New code", roomStop: "Stop sharing", cancel: "Cancel", roomStart: "Start sharing",
+    roomHide: "Do not show this notice again", roomPrivacyLink: "Privacy notes (README)", roomNew: "New code", roomStop: "Stop sharing", cancel: "Cancel", roomStart: "Start sharing",
     roomIntro: "With this, a phone or tablet can show the label live: it scans a QR code and follows every change.",
     roomDisclosure: "<b>Note:</b> when you start, this page connects to the third party <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (visible: your <mark>IP address</mark>, the page address, your browser type and a random ID). <mark>Label data only leaves once a device has opened the QR code</mark>, but then <mark>end-to-end encrypted</mark> and <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'>cached by the service <mark>for up to 12 hours</mark></a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details and privacy notes in the README</a>.",
     roomCount: n => `Sent today: ${n} of about 250 messages (limit of the free service).`, roomLimit: "Limit of the free service reached. It continues after a pause or tomorrow.",
@@ -1243,8 +1249,12 @@ function stopRoom() {
   room = null; roomHold = false; roomJoined = false; roomError = null; roomLastJson = "";
   announcePair(); updateRoomUi();
 }
+const NOTICE_KEY = "meetupapp.roomNoticeHidden";
+const noticeHidden = () => { try { return localStorage.getItem(NOTICE_KEY) === "1"; } catch { return false; } };
 function updateRoomUi() {
   const on = Boolean(room);
+  for (const el of document.querySelectorAll(".roomNotice")) el.hidden = noticeHidden();
+  for (const el of document.querySelectorAll(".roomLinkOnly")) el.hidden = !noticeHidden();   // der Hinweis erscheint nur, bis man ihn ausblendet; der README-Link bleibt
   $("roomBtn").setAttribute("aria-pressed", String(on));
   $("roomBtn").title = $("roomBtn").ariaLabel = on ? t("roomBtnOn") : t("roomBtn");
   $("roomOff").hidden = on; $("roomOn").hidden = !on;
@@ -1260,7 +1270,10 @@ function updateRoomUi() {
 }
 
 $("roomBtn").addEventListener("click", () => { $("roomBox").hidden = false; updateRoomUi(); });   // ohne Start wird nichts gesendet
-$("roomStart").addEventListener("click", () => startRoom());
+$("roomStart").addEventListener("click", () => {
+  if ($("roomHide").checked) { try { localStorage.setItem(NOTICE_KEY, "1"); } catch {} }   // beim ersten Start "nicht mehr anzeigen" gewählt
+  startRoom();
+});
 $("roomCancel").addEventListener("click", () => { $("roomBox").hidden = true; });
 $("roomClose").addEventListener("click", () => { $("roomBox").hidden = true; });
 $("roomNew").addEventListener("click", () => startRoom());
