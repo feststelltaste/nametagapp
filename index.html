@@ -36,16 +36,19 @@
   #logo { cursor:default; -webkit-tap-highlight-color:transparent; }   /* sieht nicht wie ein Link aus */
   .modal { position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); padding:16px; overflow:auto; }
   .modal[hidden] { display:none; }
-  .modal .card { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:14px; padding:18px; width:min(520px, 100%); max-height:100%; overflow:auto; box-shadow:0 10px 40px rgba(0,0,0,.35); }
+  .modal .card { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:14px; padding:18px; width:min(1040px, 100%); max-height:100%; overflow:auto; box-shadow:0 10px 40px rgba(0,0,0,.35); }
   .modal h2 { margin:0 0 8px; font-size:1.1rem; }
   .modal p { margin:12px 0 6px; font-size:.9rem; }
   .mirrorstate { padding:8px 10px; border-radius:8px; background:var(--accent-soft); font-size:.9rem; }
-  #mirrorQr svg { display:block; width:min(60vw, 260px); height:auto; margin:8px auto; border:1px solid var(--line); border-radius:6px; }
-  .linkrow { display:flex; gap:8px; }
-  .linkrow input { flex:1; min-width:0; font-size:.75rem; }
-  .linkrow button, #mirrorConnect, .mirrorbtns button { width:auto; margin:0; padding:8px 14px; background:transparent; color:var(--fg); border:1px solid var(--line); font-size:.9rem; }
+  .pair-grid { display:grid; grid-template-columns:1fr auto 1fr; gap:20px; align-items:center; margin-top:12px; }
+  .pair-step p { margin:0 0 8px; }
+  .pair-arrow { font-size:3rem; line-height:1; color:var(--accent); user-select:none; }
+  #mirrorAnswer { min-height:min(30vh, 220px); }
+  @media (max-width: 760px) { .pair-grid { grid-template-columns:1fr; } .pair-arrow { transform:rotate(90deg); justify-self:center; font-size:2rem; } }
+  #mirrorQr svg { display:block; width:min(60vw, 36vh, 300px); height:auto; margin:8px auto; border:1px solid var(--line); border-radius:6px; }
+  #mirrorConnect, .mirrorbtns button { width:auto; margin:0; padding:8px 14px; background:transparent; color:var(--fg); border:1px solid var(--line); font-size:.9rem; }
   #mirrorConnect { margin-top:8px; background:var(--accent-soft); border-color:var(--accent-edge); }
-  #mirrorAnswer { font-family:ui-monospace, Consolas, monospace; font-size:.75rem; min-height:64px; }
+  #mirrorAnswer { width:100%; font-family:ui-monospace, Consolas, monospace; font-size:.75rem; }
   .mirroreach { display:flex; gap:8px; align-items:center; font-weight:400; font-size:.9rem; margin-top:12px; }
   .mirrorbtns { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
   #qrbox { position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); }
@@ -215,6 +218,9 @@
     <label for="length" data-i18n="lengthLabel">Label length (mm, paper runs sideways)</label>
     <input id="length" type="number" min="25" max="100" step="1" value="80" disabled>
     <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="autoLength" checked style="width:auto"> <span data-i18n="autoLength">Calculate length automatically from the content</span></label>
+    <label for="welcomeTitle" data-i18n="welcomeLabel">Second screen text (optional)</label>
+    <input id="welcomeTitle" type="text" data-i18n-ph="welcomeTitlePh" placeholder="Welcome to the meetup!">
+    <input id="welcomeSub" type="text" data-i18n-ph="welcomeSubPh" placeholder="Your name tag is waiting here!" style="margin-top:6px" aria-label="Second screen text, smaller line">
     <div class="sizerow">
       <div>
         <label data-i18n="zoomLabel">Zoom (print size)</label>
@@ -255,13 +261,18 @@
     <div class="card">
       <h2 data-i18n="mirrorHeading">Connect a second device (mirror mode)</h2>
       <div id="mirrorState" class="mirrorstate"></div>
-      <div id="mirrorSteps">
-        <p data-i18n="mirrorStep1">1. Open on the second device: scan the QR code or send the link.</p>
-        <div id="mirrorQr"></div>
-        <div class="linkrow"><input id="mirrorLink" readonly><button type="button" id="mirrorCopy" data-i18n="copy">Copy</button></div>
-        <p data-i18n="mirrorStep2">2. An answer code appears there. Paste it here:</p>
-        <textarea id="mirrorAnswer" rows="3" spellcheck="false"></textarea>
-        <button type="button" id="mirrorConnect" data-i18n="connect">Connect</button>
+      <div id="mirrorSteps" class="pair-grid">
+        <section class="pair-step">
+          <p data-i18n="mirrorStep1">1. Open on the second device: scan the QR code or send the link.</p>
+          <div id="mirrorQr"></div>
+          <input id="mirrorLink" type="hidden">
+        </section>
+        <div class="pair-arrow" aria-hidden="true">➜</div>
+        <section class="pair-step">
+          <p data-i18n="mirrorStep2">2. An answer code appears there. Paste it here:</p>
+          <textarea id="mirrorAnswer" rows="6" spellcheck="false"></textarea>
+          <button type="button" id="mirrorConnect" data-i18n="connect">Connect</button>
+        </section>
       </div>
       <label class="mirroreach"><input type="checkbox" id="mirrorEach" style="width:auto"> <span data-i18n="mirrorEach">Create a new QR code after each print (the old one expires)</span></label>
       <div class="mirrorbtns">
@@ -316,8 +327,9 @@ const T = {
     print: "Drucken", lengthLabel: "Etikettenlänge (mm, Papier läuft quer)", autoLength: "Länge automatisch aus dem Inhalt berechnen",
     flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
     openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
-    openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", mirror: "📡 Mit zweitem Gerät verbinden", mirrorOn: "📡 Zweites Gerät verbunden", mirrorTitle: "Spiegelt das Etikett live auf ein zweites Gerät (WebRTC)",
-    mirrorHeading: "Zweites Gerät verbinden (Spiegelmodus)", copy: "Kopieren", copied: "Kopiert", connect: "Verbinden", repair: "Neu koppeln", close: "Schließen",
+    openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", welcomeLabel: "Text für den zweiten Bildschirm (optional)", welcomeTitlePh: "Willkommen beim Meetup!", welcomeSubPh: "Hier gibt es dein Namensschild!",
+    mirror: "📡 Mit zweitem Gerät verbinden", mirrorOn: "📡 Zweites Gerät verbunden", mirrorTitle: "Spiegelt das Etikett live auf ein zweites Gerät (WebRTC)",
+    mirrorHeading: "Zweites Gerät verbinden (Spiegelmodus)", connect: "Verbinden", repair: "Neu koppeln", close: "Schließen",
     mirrorStep1: "1. Auf dem zweiten Gerät öffnen: QR-Code scannen oder den Link verschicken.",
     mirrorStep2: "2. Dort erscheint ein Antwort-Code. Füge ihn hier ein:",
     mirrorHint: "Die Verbindung läuft direkt zwischen den beiden Geräten, die Namen gehen über keinen Server. Nur zum Finden der Adresse wird ein öffentlicher STUN-Server gefragt. Nach einem Neuladen muss neu gekoppelt werden.",
@@ -357,8 +369,9 @@ const T = {
     print: "Print", lengthLabel: "Label length (mm, paper runs sideways)", autoLength: "Calculate length automatically from the content",
     flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
     openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
-    openTop: "Open the second screen (live view) in a new window", mirror: "📡 Connect a second device", mirrorOn: "📡 Second device connected", mirrorTitle: "Mirrors the label live to a second device (WebRTC)",
-    mirrorHeading: "Connect a second device (mirror mode)", copy: "Copy", copied: "Copied", connect: "Connect", repair: "Pair again", close: "Close",
+    openTop: "Open the second screen (live view) in a new window", welcomeLabel: "Second screen text (optional)", welcomeTitlePh: "Welcome to the meetup!", welcomeSubPh: "Your name tag is waiting here!",
+    mirror: "📡 Connect a second device", mirrorOn: "📡 Second device connected", mirrorTitle: "Mirrors the label live to a second device (WebRTC)",
+    mirrorHeading: "Connect a second device (mirror mode)", connect: "Connect", repair: "Pair again", close: "Close",
     mirrorStep1: "1. Open on the second device: scan the QR code or send the link.",
     mirrorStep2: "2. An answer code appears there. Paste it here:",
     mirrorHint: "The connection runs directly between the two devices; names do not go through any server. Only a public STUN server is asked to find the address. After a reload you have to pair again.",
@@ -630,7 +643,7 @@ function toOneBit(ctx) {
 
 // Eingaben und Optionen bleiben beim Neuladen erhalten (localStorage; ohne Zugriff startet die Seite leer).
 const FIELDS_KEY = "meetupapp.fields";
-const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length"];
+const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub"];
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
@@ -644,11 +657,14 @@ function saveFields() {
 // Live-Ansicht (view.html in einem zweiten Fenster, z. B. auf dem anderen Monitor): jedes neue Etikett als PNG senden
 let liveChannel = null;
 try { liveChannel = new BroadcastChannel("meetup-label"); } catch {}
+// Text für den zweiten Bildschirm (Willkommen + kleinere Zeile) geht mit jedem Etikett an die Live-Ansicht und an das gekoppelte Gerät
+const welcomeText = () => ({ title: $("welcomeTitle").value.trim(), sub: $("welcomeSub").value.trim() });
 function publishLabel() {
   if (!liveChannel) return;
   const image = canvas.toDataURL("image/png");
-  liveChannel.postMessage({ type: "label", image });
-  try { localStorage.setItem("meetupapp.live", image); } catch {}
+  const welcome = welcomeText();
+  liveChannel.postMessage({ type: "label", image, welcome });
+  try { localStorage.setItem("meetupapp.live", image); localStorage.setItem("meetupapp.welcome", JSON.stringify(welcome)); } catch {}
   sendMirror();
 }
 
@@ -659,7 +675,7 @@ function sendMirror(now = false) {
   if (!mirror?.open) return;
   clearTimeout(mirrorTimer);
   mirrorTimer = setTimeout(() => {
-    if (mirror?.open && mirror.channel.bufferedAmount < 2e6) mirror.send({ type: "label", image: canvas.toDataURL("image/png") });
+    if (mirror?.open && mirror.channel.bufferedAmount < 2e6) mirror.send({ type: "label", image: canvas.toDataURL("image/png"), welcome: welcomeText() });
   }, now ? 0 : 120);
 }
 // Kopplungslink an die Live-Ansicht (zweites Fenster) melden: dort sieht der Teilnehmer den QR-Code und scannt ihn mit dem eigenen Handy
@@ -1032,7 +1048,7 @@ $("removeList").addEventListener("click", () => {
 });
 $("reset").addEventListener("click", () => { people.forEach(p => { p.done = false; }); save(); renderList(); });
 
-for (const id of ["title", "greeting", "name", "tags"]) $(id).addEventListener("input", render);
+for (const id of ["title", "greeting", "name", "tags", "welcomeTitle", "welcomeSub"]) $(id).addEventListener("input", render);
 $("firstOnly").addEventListener("click", () => { setFirstOnly(!firstOnly()); render(); });
 $("flip").addEventListener("change", render);
 // Zufällige positive Zwischenzeilen: Adjektiv (gegendert) in zwei Formen, z. B. "Großartige(r)" oder "Der/Die Phantastische".
@@ -1319,10 +1335,6 @@ $("mirrorEach").checked = (() => { try { return localStorage.getItem("meetupapp.
 $("mirrorEach").addEventListener("change", () => { try { localStorage.setItem("meetupapp.mirrorEach", $("mirrorEach").checked ? "1" : "0"); } catch {} });
 $("mirrorClose").addEventListener("click", () => { $("mirrorBox").hidden = true; });
 $("mirrorReset").addEventListener("click", startPairing);
-$("mirrorCopy").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText($("mirrorLink").value); } catch { $("mirrorLink").select(); document.execCommand?.("copy"); }
-  $("mirrorCopy").textContent = t("copied"); setTimeout(() => { $("mirrorCopy").textContent = t("copy"); }, 1500);
-});
 $("mirrorConnect").addEventListener("click", async () => {
   const code = answerFrom($("mirrorAnswer").value);
   if (!code || !mirror) { setMirrorState("mirrorError", t("mirrorBadCode")); return; }

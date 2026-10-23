@@ -25,6 +25,13 @@
   .pairbtns { display:flex; gap:8px; margin-top:8px; }
   .pairbtns button { font:inherit; padding:10px 16px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:#fff; }
   .pairbtns button + button { background:transparent; color:var(--fg); border-color:var(--line); }
+  #welcome { position:fixed; top:0; left:0; right:0; z-index:2; padding:16px 16px 4px; text-align:center; pointer-events:none; }
+  #welcome[hidden] { display:none; }
+  #welcomeTitle { font-size:clamp(1.6rem, 4.2vw, 3.2rem); font-weight:800; line-height:1.15; }
+  #welcomeSub { margin-top:4px; font-size:clamp(1rem, 2.2vw, 1.7rem); color:var(--muted); }
+  #zoombar { position:fixed; left:12px; bottom:12px; z-index:3; display:flex; gap:4px; opacity:.45; transition:opacity .15s; }
+  #zoombar:hover, #zoombar:focus-within { opacity:1; }
+  #zoombar button { font:inherit; min-width:2.4em; padding:6px 8px; color:var(--fg); background:#fff; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
   #scan { position:fixed; right:16px; bottom:16px; z-index:3; width:min(340px, 46vw); padding:12px; text-align:center; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.15); }
   #scan[hidden] { display:none; }
   #scanQr svg { display:block; width:100%; height:auto; }
@@ -53,6 +60,15 @@
   <div id="scanQr" aria-hidden="true"></div>
   <div id="scanText"></div>
 </aside>
+<header id="welcome" hidden>
+  <div id="welcomeTitle"></div>
+  <div id="welcomeSub"></div>
+</header>
+<div id="zoombar" role="group" aria-label="Zoom">
+  <button type="button" id="zOut" aria-label="Zoom out" title="Zoom out (−)">−</button>
+  <button type="button" id="zVal" aria-label="Reset zoom" title="Reset zoom (0)">100%</button>
+  <button type="button" id="zIn" aria-label="Zoom in" title="Zoom in (+)">+</button>
+</div>
 <div id="stage">
   <div id="shadow"><img id="tag" alt="Namensschild"></div>
   <div id="wait"><b>No name tag yet</b>Open the editor in the same browser (same address). As soon as a label appears there, you will see it here live.</div>
@@ -66,13 +82,35 @@ const $ = id => document.getElementById(id);
 const tag = $("tag");
 
 
+// Zoom der Ansicht: Faktor auf die passende Größe, mit Tasten + / − / 0 oder den Knöpfen unten links; wird gemerkt
+const ZOOM_KEY = "view.zoom", ZOOM_MIN = 0.2, ZOOM_MAX = 1.5;
+let viewZoom = 1;
+try { const z = Number(localStorage.getItem(ZOOM_KEY)); if (z >= ZOOM_MIN && z <= ZOOM_MAX) viewZoom = z; } catch {}
+function setZoom(z) {
+  viewZoom = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)) * 100) / 100;
+  $("zVal").textContent = Math.round(viewZoom * 100) + "%";
+  try { localStorage.setItem(ZOOM_KEY, String(viewZoom)); } catch {}
+  fit();
+}
+
 function fit() {
+  const header = $("welcome").hidden ? 0 : $("welcome").offsetHeight;   // Platz für den Willkommenstext oben
+  $("stage").style.paddingTop = (12 + header) + "px";
   if (!tag.naturalWidth) return;
-  const boxW = innerWidth - 24, boxH = innerHeight - 24 - 20;   // 20 px für die Trägerpapier-Streifen oben und unten
-  const scale = Math.min(boxW / tag.naturalWidth, boxH / tag.naturalHeight);   // das Etikett bleibt immer liegend und wird nur skaliert
+  const boxW = innerWidth - 24, boxH = innerHeight - 24 - 20 - header;   // 20 px für die Trägerpapier-Streifen oben und unten
+  const scale = Math.min(boxW / tag.naturalWidth, boxH / tag.naturalHeight) * viewZoom;   // das Etikett bleibt immer liegend und wird nur skaliert
   tag.style.width = Math.floor(tag.naturalWidth * scale) + "px";
   tag.style.height = Math.floor(tag.naturalHeight * scale) + "px";
   tag.style.clipPath = sawEdges(Math.floor(tag.naturalWidth * scale), Math.floor(tag.naturalHeight * scale));
+}
+
+// Willkommenstext (vom Editor, unter Einstellungen): große Zeile und darunter eine kleinere
+function showWelcome(welcome) {
+  const title = (welcome?.title || "").trim(), sub = (welcome?.sub || "").trim();
+  $("welcomeTitle").textContent = title; $("welcomeSub").textContent = sub;
+  $("welcomeTitle").hidden = !title; $("welcomeSub").hidden = !sub;
+  $("welcome").hidden = !title && !sub;
+  fit();
 }
 
 // Winzige Zacken am linken und rechten Rand, wie bei einem abgerissenen Etikett (clip-path in Bildpixeln)
@@ -110,15 +148,26 @@ try {
   channel = new BroadcastChannel("meetup-label");
   channel.onmessage = event => {
     const message = event.data;
-    if (message?.type === "label") show({ image: message.image });
+    if (message?.type === "label") { show({ image: message.image }); showWelcome(message.welcome); }
     else if (message?.type === "pair") showScan(message.link);        // Kopplungscode des Editors: der Teilnehmer scannt ihn
     else if (message?.type === "pair-clear") showScan("");
   };
   channel.postMessage({ type: "hello" });   // Editor antwortet mit dem aktuellen Etikett
 } catch { $("wait").textContent = "BroadcastChannel wird von diesem Browser nicht unterstützt."; }
 try { const last = localStorage.getItem(LIVE_KEY); if (last) show({ image: last }); } catch {}
+try { showWelcome(JSON.parse(localStorage.getItem("meetupapp.welcome") || "null")); } catch {}
 
 addEventListener("resize", fit);
+$("zIn").addEventListener("click", () => setZoom(viewZoom + 0.1));
+$("zOut").addEventListener("click", () => setZoom(viewZoom - 0.1));
+$("zVal").addEventListener("click", () => setZoom(1));
+addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "+" || e.key === "=") setZoom(viewZoom + 0.1);
+  else if (e.key === "-" || e.key === "_") setZoom(viewZoom - 0.1);
+  else if (e.key === "0") setZoom(1);
+});
+setZoom(viewZoom);
 // ---------- Spiegelmodus: Kopplung per WebRTC ----------
 // Aufruf mit view.html#o=<Code>: Antwort-Code erzeugen, im Editor einfügen lassen, danach kommen die Etiketten live an.
 const TEXT = {
@@ -148,7 +197,7 @@ async function pairFromHash() {
         if (tag.naturalWidth) { document.body.classList.add("lost"); $("lostNote").textContent = L("lost"); return; }   // Etikett bleibt stehen, nur ein Hinweis
         $("pair").hidden = false; $("pairCode").hidden = $("pairBtns").hidden = true; $("pairTitle").textContent = L("lost"); $("pairText").textContent = ""; $("pairHint").textContent = "";
       },
-      onMessage: message => { if (message?.type === "label") show({ image: message.image }); },
+      onMessage: message => { if (message?.type === "label") { show({ image: message.image }); showWelcome(message.welcome); } },
     });
   } catch { $("pairTitle").textContent = L("bad"); return; }
   $("pairTitle").textContent = L("answerTitle");
