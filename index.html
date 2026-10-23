@@ -218,9 +218,6 @@
     <label for="length" data-i18n="lengthLabel">Label length (mm, paper runs sideways)</label>
     <input id="length" type="number" min="25" max="100" step="1" value="80" disabled>
     <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="autoLength" checked style="width:auto"> <span data-i18n="autoLength">Calculate length automatically from the content</span></label>
-    <label for="welcomeTitle" data-i18n="welcomeLabel">Second screen text (optional)</label>
-    <input id="welcomeTitle" type="text" data-i18n-ph="welcomeTitlePh" placeholder="Welcome to the meetup!">
-    <input id="welcomeSub" type="text" data-i18n-ph="welcomeSubPh" placeholder="Your name tag is waiting here!" style="margin-top:6px" aria-label="Second screen text, smaller line">
     <div class="sizerow">
       <div>
         <label data-i18n="zoomLabel">Zoom (print size)</label>
@@ -252,6 +249,9 @@
     </div>
 
     <button id="openView" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n-title="openViewTitle" data-i18n="openView" title="Opens view.html in a second window, e.g. for the other monitor">🖥 Live view in new window</button>
+    <label for="welcomeTitle" style="margin-top:12px" data-i18n="welcomeLabel">Second screen text (optional)</label>
+    <input id="welcomeTitle" type="text" data-i18n-ph="welcomeTitlePh" placeholder="Welcome to the meetup!">
+    <input id="welcomeSub" type="text" data-i18n-ph="welcomeSubPh" placeholder="Your name tag is waiting here!" style="margin-top:6px" aria-label="Second screen text, smaller line">
   </section>
   </div>
 
