@@ -15,6 +15,18 @@
   #shadow { position:relative; flex:none; }
   /* Trägerpapier: schmale hellbeige Streifen nur über und unter dem Etikett; links und rechts (in den Zacken) ist kein Rand zu sehen */
   #shadow::before { content:""; position:absolute; left:2.5px; right:2.5px; top:-9px; bottom:-9px; background:#f0e6d0; border-block:1px solid #e2d5b8; }
+  #consent { position:fixed; inset:0; z-index:6; display:flex; align-items:center; justify-content:center; padding:16px; background:var(--bg); overflow:auto; }
+  #consent[hidden] { display:none; }
+  #consent .card { width:min(520px, 100%); background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 4px 24px rgba(0,0,0,.08); }
+  #consent h2 { margin:0 0 8px; font-size:1.25rem; }
+  #consent p { margin:8px 0; }
+  #consent ul { margin:8px 0 8px 1.1em; padding:0; }
+  #consent li { margin:6px 0; }
+  #consent .small { font-size:.85rem; color:var(--muted); }
+  #consent a { color:inherit; }
+  .consentbtns { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap; }
+  .consentbtns button { font:inherit; font-weight:600; padding:12px 18px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--fg); cursor:pointer; }
+  .consentbtns #consentYes { background:var(--accent); border-color:var(--accent); color:#fff; }
   #welcome { position:fixed; top:0; left:0; right:0; z-index:2; padding:16px 16px 4px; text-align:center; pointer-events:none; }
   #welcome[hidden] { display:none; }
   #welcomeTitle { font-size:clamp(1.6rem, 4.2vw, 3.2rem); font-weight:800; line-height:1.15; }
@@ -33,6 +45,19 @@
 </style>
 </head>
 <body>
+<div id="consent" hidden>
+  <div class="card">
+    <h2 id="consentTitle"></h2>
+    <p id="consentIntro"></p>
+    <ul id="consentList"></ul>
+    <p class="small"><a id="consentMore" target="_blank" rel="noopener"></a> · <a id="consentNtfy" target="_blank" rel="noopener"></a></p>
+    <div class="consentbtns">
+      <button type="button" id="consentNo"></button>
+      <button type="button" id="consentYes"></button>
+    </div>
+    <p id="consentDone" class="small" hidden></p>
+  </div>
+</div>
 <div id="lostNote"></div>
 <aside id="scan" hidden>
   <div id="scanQr" aria-hidden="true"></div>
@@ -151,13 +176,30 @@ addEventListener("keydown", e => {
 });
 setZoom(viewZoom);
 // ---------- Raum auf einem anderen Gerät (view.html#r=<Raum>): der Editor schickt verschlüsselt jede Änderung, wir zeichnen sie selbst ----------
+const README_PRIVACY = "https://github.com/feststelltaste/nametagapp#privacy", NTFY_PRIVACY = "https://docs.ntfy.sh/privacy/";
 const TEXT = {
-  de: { scan: "Scanne den Code, um dein Namensschild auf dem Handy zu sehen", waitingTitle: "Noch kein Namensschild", waiting: "Sobald im Editor ein Etikett erscheint, siehst du es hier live.",
-        reconnecting: "Verbindung unterbrochen, versuche es erneut …", bad: "Dieser Link ist ungültig. Scanne den QR-Code im Editor noch einmal." },
-  en: { scan: "Scan to see your name tag on your phone", waitingTitle: "No name tag yet", waiting: "As soon as a label appears in the editor, you will see it here live.",
-        reconnecting: "Connection lost, trying again …", bad: "This link is not valid. Scan the QR code in the editor again." },
+  de: { scan: "Scanne den Code, um dein Namensschild auf dem Handy zu sehen. Vorher wirst du gefragt, bevor etwas gesendet wird.", waitingTitle: "Noch kein Namensschild", waiting: "Sobald im Editor ein Etikett erscheint, siehst du es hier live.",
+        reconnecting: "Verbindung unterbrochen, versuche es erneut …", bad: "Dieser Link ist ungültig. Scanne den QR-Code im Editor noch einmal.",
+        consentTitle: "Dein Namensschild auf dem Handy zeigen?",
+        consentIntro: "Dafür verbindet sich diese Seite mit dem öffentlichen Dienst ntfy.sh (ein Drittanbieter). Erst wenn du unten auf „Verbinden“ tippst, passiert Folgendes:",
+        consentItems: ["ntfy.sh sieht deine IP-Adresse, deinen Browser-Typ und die Adresse dieser Seite.",
+                       "Die Daten deines Namensschilds (Name, Titel, Hashtags) kommen Ende-zu-Ende verschlüsselt über ntfy.sh. Der Dienst kann sie nicht lesen, speichert sie aber bis zu 12 Stunden.",
+                       "Dein Handy sendet nur ein kurzes verschlüsseltes „Hallo“, damit das Namensschild geschickt wird. Keine Cookies, kein Konto.",
+                       "Vorher wird nichts gesendet."],
+        consentYes: "Verbinden und mein Namensschild zeigen", consentNo: "Nein, danke", consentDone: "Es wurde nichts gesendet. Du kannst diese Seite schließen.",
+        consentMore: "Details zum Datenschutz", consentNtfy: "Datenschutzerklärung von ntfy" },
+  en: { scan: "Scan to see your name tag on your phone. You are asked before anything is sent.", waitingTitle: "No name tag yet", waiting: "As soon as a label appears in the editor, you will see it here live.",
+        reconnecting: "Connection lost, trying again …", bad: "This link is not valid. Scan the QR code in the editor again.",
+        consentTitle: "Show your name tag on your phone?",
+        consentIntro: "To do that, this page connects to the public service ntfy.sh (a third party). Only when you tap “Connect” below, this happens:",
+        consentItems: ["ntfy.sh sees your IP address, your browser type and the address of this page.",
+                       "The data of your name tag (name, title, hashtags) comes end-to-end encrypted through ntfy.sh. The service cannot read it, but keeps it for up to 12 hours.",
+                       "Your phone only sends a short encrypted “hello” so that the name tag is sent. No cookies, no account.",
+                       "Nothing is sent before that."],
+        consentYes: "Connect and show my name tag", consentNo: "No, thanks", consentDone: "Nothing was sent. You can close this page.",
+        consentMore: "Privacy details", consentNtfy: "ntfy privacy policy" },
 };
-let uiLang = "en";   // Einstieg ist Englisch; die im Editor gewählte Sprache wird übernommen, wenn sie hier gespeichert ist
+let uiLang = (navigator.language || "en").toLowerCase().startsWith("de") ? "de" : "en";   // Gäste lesen die Zustimmung in der Sprache ihres Handys; eine im Editor gewählte Sprache hat Vorrang
 try { const saved = localStorage.getItem("meetupapp.lang"); if (saved === "de" || saved === "en") uiLang = saved; } catch {}
 const L = key => TEXT[uiLang][key];
 
@@ -169,19 +211,35 @@ function applyPayload(payload) {
   showWelcome(payload.welcome);
 }
 let roomSubscription = null;
-function openRoom() {
-  roomSubscription?.close(); roomSubscription = null;
-  const match = location.hash.match(/^#r=(.+)$/);
-  if (!match) return;
-  const room = Relay.parseRoom(match[1]);
+function connectRoom(room) {
   const wait = $("wait");
-  if (!room) { wait.textContent = L("bad"); return; }
-  wait.innerHTML = ""; const b = document.createElement("b"); b.textContent = L("waitingTitle"); wait.append(b, L("waiting"));
+  wait.innerHTML = ""; const bold = document.createElement("b"); bold.textContent = L("waitingTitle"); wait.append(bold, L("waiting"));
   roomSubscription = Relay.subscribe(room, applyPayload, state => {
     if (state === "verbunden") Relay.signal(room).catch(() => {});   // dem Editor melden: ab jetzt senden (auch nach einer Wiederverbindung)
     document.body.classList.toggle("lost", state === "getrennt");
     $("lostNote").textContent = state === "getrennt" ? L("reconnecting") : "";
   });
+}
+// Zustimmung vor der ersten Verbindung: der Gast erfährt, was an ntfy.sh geht, bevor irgendetwas gesendet wird
+function askConsent(room) {
+  $("consentTitle").textContent = L("consentTitle"); $("consentIntro").textContent = L("consentIntro");
+  $("consentList").replaceChildren(...L("consentItems").map(text => Object.assign(document.createElement("li"), { textContent: text })));
+  $("consentYes").textContent = L("consentYes"); $("consentNo").textContent = L("consentNo");
+  $("consentMore").textContent = L("consentMore"); $("consentMore").href = README_PRIVACY;
+  $("consentNtfy").textContent = L("consentNtfy"); $("consentNtfy").href = NTFY_PRIVACY;
+  $("consentDone").hidden = true; $("consent").hidden = false;
+  $("consentYes").onclick = () => { try { sessionStorage.setItem("consent:" + room.topic, "1"); } catch {} $("consent").hidden = true; connectRoom(room); };
+  $("consentNo").onclick = () => { $("consentDone").textContent = L("consentDone"); $("consentDone").hidden = false; $("consentYes").hidden = $("consentNo").hidden = true; };
+}
+function openRoom() {
+  roomSubscription?.close(); roomSubscription = null;
+  const match = location.hash.match(/^#r=(.+)$/);
+  if (!match) return;
+  const room = Relay.parseRoom(match[1]);
+  if (!room) { $("wait").textContent = L("bad"); return; }
+  let agreed = false;
+  try { agreed = sessionStorage.getItem("consent:" + room.topic) === "1"; } catch {}   // in diesem Tab schon zugestimmt: nicht nochmal fragen
+  if (agreed) connectRoom(room); else askConsent(room);
 }
 openRoom();
 addEventListener("hashchange", openRoom);   // ein neuer Link im selben Tab ändert nur den Teil nach dem #
