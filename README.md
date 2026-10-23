@@ -30,7 +30,7 @@ Type a name, pick a few words, press print: the label goes straight from your br
 
 ## Printer
 
-Developed for the **X6h** (50 mm labels, 48 mm print width). Other printers that speak the same Cat Printer protocol may work. The label is printed sideways so the text runs along the paper.
+Developed for the **X6h** (57 mm paper roll, 48 mm print width). Other printers that speak the same Cat Printer protocol may work. The label is printed sideways so the text runs along the paper.
 
 ## Privacy
 
@@ -73,7 +73,7 @@ Die App startet auf Englisch. Mit dem Button **DE** oben rechts schaltest du auf
 
 ### Drucker
 
-Entwickelt für den **X6h** (50-mm-Etiketten, 48 mm Druckbreite). Andere Drucker mit demselben Cat-Printer-Protokoll funktionieren möglicherweise. Das Etikett wird quer gedruckt, damit der Text entlang des Papiers läuft.
+Entwickelt für den **X6h** (57-mm-Papierrolle, 48 mm Druckbreite). Andere Drucker mit demselben Cat-Printer-Protokoll funktionieren möglicherweise. Das Etikett wird quer gedruckt, damit der Text entlang des Papiers läuft.
 
 ### Datenschutz
 

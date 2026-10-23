@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">   <!-- zum Home-Bildschirm hinzugefügt (iPhone/iPad) startet die Seite ohne Browserleisten -->
 <title>NametagApp</title>
 <style>
   :root { --bg:#f5f5f4; --fg:#1c1917; --card:#fff; --line:#d6d3d1; --accent:#c8102e; --on-accent:#fff; --muted:#78716c; color-scheme:light; }
@@ -31,6 +33,7 @@
   .iconbtn { position:relative; width:auto; margin:0; padding:6px 10px; display:flex; align-items:center; background:transparent; color:var(--fg); border:1px solid var(--line); }
   .iconbtn[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); }
   .iconbtn[aria-pressed="true"]::after { content:""; position:absolute; top:3px; right:3px; width:8px; height:8px; border-radius:50%; background:#22c55e; }   /* grüner Punkt: verbunden */
+  #fullscreen[aria-pressed="true"]::after { display:none; }   /* der grüne Punkt gilt nur für „verbunden“ */
   #lang { width:auto; margin:0; padding:6px 12px; font-size:.85rem; font-weight:700; background:transparent; color:var(--fg); border:1px solid var(--line); }
   #theme { width:auto; margin:0; padding:6px 12px; font-size:1.1rem; background:transparent; color:var(--fg); border:1px solid var(--line); }
   #logo { cursor:default; -webkit-tap-highlight-color:transparent; }   /* sieht nicht wie ein Link aus */
@@ -160,16 +163,39 @@
   #list input { width:auto; }
   #list li.done label { color:var(--muted); text-decoration:line-through; }
   .preview { display:flex; flex-direction:column; align-items:center; }
+  #print[data-connected="false"] { background:var(--card); color:var(--accent); border:2px solid var(--accent); }   /* „Verbinden“: weiß mit rotem Rand, damit er sich abhebt; „Drucken“ bleibt rot gefüllt */
+  .linkbtn { order:5; width:auto; margin:6px auto 0; padding:4px 8px; background:transparent; color:var(--muted); font-size:.8rem; font-weight:400; text-decoration:underline; }
   .preview #print { flex:1; width:100%; min-height:64px; max-height:96px; margin-top:12px; font-size:1.4rem; letter-spacing:.02em; order:3; }   /* riesig: füllt die Box bis nach unten */
-  .preview #status { order:2; }
+  .preview #status { order:4; }   /* Meldungen („Verbinde …“) stehen direkt unter dem Druckknopf, an der Stelle des Trennen-Links */
   .preview .tagwrap { order:0; }
   #status { margin-top:12px; min-height:1.4em; color:var(--muted); font-size:.9rem; }
   #status.err { color:#dc2626; }
+  @media (max-width: 759px) {   /* Handy: kompakter, damit Felder, Vorschau und Druckknopf möglichst auf einen Bildschirm passen */
+    main { padding:12px 10px 20px; gap:10px; }
+    .people, .settings { margin-top:12px; }
+    form, .preview, .settings, .people { padding:12px; border-radius:10px; }
+    label { margin:6px 0 2px; }
+    input, textarea { padding:9px 10px; }
+    textarea { min-height:56px; }
+    .rolls { margin-top:6px; }
+    button { margin-top:10px; padding:11px; }
+    #clear { margin-top:6px !important; padding:9px; }
+    .tagwrap { margin:10px 0 12px; }   /* die Trägerpapier-Streifen ragen 9 px über und unter das Etikett */
+    .sizeinfo { margin-top:0; font-size:.75rem; }
+    .preview #print { margin-top:6px; min-height:52px; font-size:1.25rem; }
+    .preview { padding:10px 12px; }
+    .head { gap:8px; flex-wrap:wrap; }
+    .headbtns { gap:6px; }
+    .iconbtn, #lang, #theme { padding:6px 8px; }
+    h1 { font-size:1.2rem; }
+    h1 small { display:block; margin:0; font-size:.6em; }
+    #status:empty { display:none; }
+  }
 </style>
 </head>
 <body>
 <main>
-  <div class="head"><h1><span id="logo">NametagApp</span> <small>by feststelltaste</small></h1><span class="headbtns"><button id="openViewTop" type="button" class="iconbtn" data-i18n-title="openTop" data-i18n-aria="openTop" title="Open the second screen (live view) in a new window" aria-label="Open the second screen (live view) in a new window"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button><button id="roomBtn" type="button" class="iconbtn" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm10-2h2v2h-2zm4 0h2v2h-2zm-6 4h2v2h-2zm4 0h4v2h-4zm-2 2h2v2h-2zm4 0h2v2h-2z"/></svg></button><button id="lang" type="button" data-i18n-title="langTitle" title="Sprache / Language">EN</button><button id="theme" type="button" data-i18n-title="themeTitle" data-i18n-aria="themeAria" title="Toggle light / dark" aria-label="Switch appearance">🌙</button></span></div>
+  <div class="head"><h1><span id="logo">NametagApp</span> <small>by feststelltaste</small></h1><span class="headbtns"><button id="fullscreen" type="button" class="iconbtn" aria-pressed="false" hidden data-i18n-title="fullscreenTitle" data-i18n-aria="fullscreenTitle" title="Full screen" aria-label="Full screen"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button><button id="openViewTop" type="button" class="iconbtn" data-i18n-title="openTop" data-i18n-aria="openTop" title="Open the second screen (live view) in a new window" aria-label="Open the second screen (live view) in a new window"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button><button id="roomBtn" type="button" class="iconbtn" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm10-2h2v2h-2zm4 0h2v2h-2zm-6 4h2v2h-2zm4 0h4v2h-4zm-2 2h2v2h-2zm4 0h2v2h-2z"/></svg></button><button id="lang" type="button" data-i18n-title="langTitle" title="Sprache / Language">EN</button><button id="theme" type="button" data-i18n-title="themeTitle" data-i18n-aria="themeAria" title="Toggle light / dark" aria-label="Switch appearance">🌙</button></span></div>
 
   <div class="col">
   <form id="form" autocomplete="off">
@@ -237,7 +263,8 @@
   <div class="preview">
     <div class="tagwrap"><canvas id="canvas"></canvas></div>
     <div id="sizeInfo" class="sizeinfo"></div>
-    <button id="print" type="submit" form="form" data-i18n="print">Print</button>
+    <button id="print" type="submit" form="form" data-connected="false">Print</button>
+    <button id="disconnect" type="button" class="linkbtn" hidden></button>
     <div id="status"></div>
   </div>
 
@@ -297,6 +324,17 @@
 
   <footer class="foot">© Markus Harrer · <a href="https://github.com/feststelltaste/nametagapp/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> · <a href="https://github.com/feststelltaste/nametagapp" target="_blank" rel="noopener">github.com/feststelltaste/nametagapp</a></footer>
 
+  <div id="disconnectBox" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="disconnectTitle">
+    <div class="card" style="width:min(420px, 100%)">
+      <h2 id="disconnectTitle" data-i18n="disconnectTitle">Disconnect printer?</h2>
+      <p data-i18n="disconnectAsk">You have to connect again before the next print.</p>
+      <div class="roombtns">
+        <button type="button" id="disconnectCancel" data-i18n="cancel">Cancel</button>
+        <button type="button" id="disconnectYes" class="roomgo" data-i18n="disconnectYes">Disconnect</button>
+      </div>
+    </div>
+  </div>
+
   <div id="roomBox" class="modal" hidden>
     <div class="card">
       <h2 data-i18n="roomHeading">Open the second screen on another device</h2>
@@ -344,6 +382,7 @@
 // ---------- Etikett zeichnen ----------
 let zoom = 1;   // Druckgröße: 1, 0.75 oder 0.5 (Schrift kleiner, die Etikettenbreite bleibt)
 let sideCm = 0.5;   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom)
+const ROLL_MM = 57;   // Rollenbreite: immer 57 mm, davon werden 48 mm bedruckt (384 Punkte)
 const { PREVIEW_SCALE, WIDTH, DOTS_PER_MM, firstName } = Label;   // Etikett-Berechnung und -Zeichnung: label.js
 
 const $ = id => document.getElementById(id);
@@ -374,6 +413,7 @@ const T = {
     flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
     bubbles: "Sprechblasen in der Live-Ansicht", bubbleNamePh: "Verrate uns deinen Namen", bubbleGreetingPh: "{welcher} {name} bist du?", bubbleTagsPh: "Was begeistert dich?", bubbleHint: "Leer lassen für den Standardtext. {name} = Name vom Etikett, {welcher} = Welcher/Welche (nach Geschlecht).",
     openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
+    fullscreenTitle: "Vollbild an/aus", connectPrinter: "Drucker verbinden",
     openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", welcomeLabel: "Text für den zweiten Bildschirm (optional)", welcomeTitlePh: "Willkommen bei uns!", welcomeSubPh: "Hier gibt es dein Namensschild!", welcomeClearTitle: "Text für den zweiten Bildschirm leeren",
     close: "Schließen",
     roomBtn: "Zweiter Bildschirm auf einem anderen Gerät (QR-Code)", roomBtnOn: "Zweiter Bildschirm läuft (QR-Code)",
@@ -389,7 +429,7 @@ const T = {
     sizeInfo: (l, w) => `Etikett ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Gesendet in ${sec} s (${bytes} Bytes) – warte auf den Druck …`,
     noBluetooth: "Web Bluetooth fehlt – bitte Chrome oder Edge über localhost/HTTPS nutzen.",
-    connecting: "Verbinde und drucke …",
+    connecting: "Verbinde …", printing: "Drucke …", disconnect: "Verbindung trennen", disconnectTitle: "Drucker trennen?", disconnectYes: "Trennen", disconnectAsk: "Danach kann sich ein anderes Gerät mit dem Drucker verbinden. Vor dem nächsten Druck musst du dich neu verbinden.",
     printed: (a, b, n) => `Gedruckt. Senden ${a} s, gesamt ${b} s, ${n} Zeilen.`,
     noPrinter: "Kein Drucker gewählt.", error: m => `Fehler: ${m}`,
   },
@@ -417,6 +457,7 @@ const T = {
     flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
     bubbles: "Speech bubbles in the live view", bubbleNamePh: "Tell us your name", bubbleGreetingPh: "Which {name} are you?", bubbleTagsPh: "What excites you?", bubbleHint: "Leave empty for the default. {name} = name on the label.",
     openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
+    fullscreenTitle: "Full screen on/off", connectPrinter: "Connect printer",
     openTop: "Open the second screen (live view) in a new window", welcomeLabel: "Second screen text (optional)", welcomeTitlePh: "Welcome!", welcomeSubPh: "Get your name tag here!", welcomeClearTitle: "Clear the second screen text",
     close: "Close",
     roomBtn: "Second screen on another device (QR code)", roomBtnOn: "Second screen is running (QR code)",
@@ -432,7 +473,7 @@ const T = {
     sizeInfo: (l, w) => `Label ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Sent in ${sec} s (${bytes} bytes) – waiting for the print …`,
     noBluetooth: "Web Bluetooth is missing – please use Chrome or Edge via localhost/HTTPS.",
-    connecting: "Connecting and printing …",
+    connecting: "Connecting …", printing: "Printing …", disconnect: "Disconnect", disconnectTitle: "Disconnect printer?", disconnectYes: "Disconnect", disconnectAsk: "Afterwards another device can connect to the printer. You have to connect again before the next print.",
     printed: (a, b, n) => `Printed. Sending ${a} s, total ${b} s, ${n} rows.`,
     noPrinter: "No printer selected.", error: m => `Error: ${m}`,
   },
@@ -454,6 +495,7 @@ function applyI18n() {
   $("genderM").hidden = $("genderF").hidden = lang !== "de";
   if (typeof refreshColumnOptions === "function") refreshColumnOptions();
   if (typeof updateRoomUi === "function") updateRoomUi();
+  if (typeof updatePrinterUi === "function") updatePrinterUi();
   if (typeof renderList === "function") renderList();
 }
 const canvas = $("canvas");                       // Vorschau (liegend)
@@ -473,11 +515,13 @@ function applyPreviewSize() {
   if (!previewFullPx) return;
   const card = canvas.closest(".preview");
   const available = Math.max(120, card.clientWidth - 32);
-  const k = Math.min(available / previewFullPx, 1.2);   // Maßstab hängt nicht vom Zoom ab: gleiche Etikettenbreite, nur die Länge ändert sich
+  const narrow = matchMedia("(max-width: 759px)").matches;
+  const k = Math.min(available / previewFullPx, 1, narrow ? screen.height * 0.17 / WIDTH : Infinity);   // Handy: das Etikett bleibt flach genug, damit Felder, Vorschau und Druck auf einen Bildschirm passen (screen.height: ändert sich nicht mit der Tastatur)   // Maßstab hängt nicht vom Zoom ab: gleiche Etikettenbreite, nur die Länge ändert sich
   canvas.style.width = Math.round(previewPrintedPx * k) + "px";
   canvas.style.height = Math.round(WIDTH * k) + "px";
 }
 new ResizeObserver(applyPreviewSize).observe(canvas.closest(".preview"));
+addEventListener("resize", applyPreviewSize);
 
 // Eingaben des Editors als Modell für label.js (dasselbe Modell geht an die Live-Ansicht)
 // Name auf dem Etikett: der echte Name der gewählten Person, wenn "Nicknames überschreiben" an ist und einer eingetragen ist
@@ -523,7 +567,7 @@ function drawLabel() {
   pctx.setTransform(1, 0, 0, 1, 0, 0);
   toOneBit(pctx);
   // Länge zur Abschätzung unter der Vorschau (gedruckte Größe, mit Zoom)
-  $("sizeInfo").textContent = t("sizeInfo", Math.round(printLength / DOTS_PER_MM), WIDTH / DOTS_PER_MM);
+  $("sizeInfo").textContent = t("sizeInfo", Math.round(printLength / DOTS_PER_MM), ROLL_MM);
 }
 
 // Der Drucker kennt nur Schwarz/Weiß: harter Schwellwert, damit die Vorschau genau zeigt, was gedruckt wird.
@@ -664,12 +708,22 @@ async function ensureConnected() {
       filters: [{ namePrefix: "X6h" }],
       optionalServices: [SERVICE],
     });
-    device.addEventListener("gattserverdisconnected", () => { txChar = null; });
+    device.addEventListener("gattserverdisconnected", () => { txChar = null; updatePrinterUi(); });
   }
   const server = await device.gatt.connect();
   const service = await server.getPrimaryService(SERVICE);
   txChar = await service.getCharacteristic(TX_UUID);
+  updatePrinterUi();
   return txChar;
+}
+
+// Der Druckknopf heißt „Verbinden“, solange kein Drucker verbunden ist: erst verbinden (die Verbindung bleibt offen), dann drucken.
+// Getrennt wird durch Ausschalten des Druckers; dann steht wieder „Verbinden“ da.
+function updatePrinterUi() {
+  const on = Boolean(txChar && device?.gatt.connected);
+  $("print").dataset.connected = String(on || !navigator.bluetooth);   // ohne Web Bluetooth gibt es nichts zu verbinden: der Knopf bleibt „Drucken“ (rot)
+  $("print").textContent = !navigator.bluetooth || on ? t("print") : t("connectPrinter");
+  $("disconnect").textContent = t("disconnect"); $("disconnect").hidden = !on;
 }
 
 async function printCanvas() {
@@ -693,12 +747,16 @@ async function printCanvas() {
 // ---------- UI ----------
 const status = (text, error = false) => { $("status").textContent = text; $("status").className = error ? "err" : ""; };
 
+$("disconnect").addEventListener("click", () => { $("disconnectBox").hidden = false; $("disconnectCancel").focus(); });   // erst Rückfrage im Dialog
+$("disconnectCancel").addEventListener("click", () => { $("disconnectBox").hidden = true; });
+$("disconnectYes").addEventListener("click", () => { $("disconnectBox").hidden = true; device?.gatt.disconnect(); });   // gattserverdisconnected stellt den Knopf wieder auf „Verbinden“
 $("form").addEventListener("submit", async event => {
   event.preventDefault();
   if (!navigator.bluetooth) return status(t("noBluetooth"), true);
   $("print").disabled = true;
   try {
-    status(t("connecting"));
+    if (!(txChar && device?.gatt.connected)) { status(t("connecting")); await ensureConnected(); status(""); return; }   // erster Klick: nur verbinden; gedruckt wird mit dem nächsten
+    status(t("printing"));
     const result = await printCanvas();
     const printed = matchPerson();
     if (printed) { printed.done = true; save(); renderList(); }
@@ -712,6 +770,7 @@ $("form").addEventListener("submit", async event => {
     else status(t("error", error.message), true);
   } finally {
     $("print").disabled = false;
+    updatePrinterUi();
   }
 });
 
@@ -1250,6 +1309,12 @@ restoreFields();
 // Hell/Dunkel: folgt dem System, bis man umschaltet; die Wahl bleibt gespeichert.
 const THEME_KEY = "meetupapp.theme";
 const systemDark = () => matchMedia("(prefers-color-scheme: dark)").matches;
+// Vollbild (Handy und Desktop): nur wenn der Browser es kann; auf dem iPhone fehlt die Funktion, dort hilft „Zum Home-Bildschirm“
+if (document.fullscreenEnabled) {
+  $("fullscreen").hidden = false;
+  $("fullscreen").addEventListener("click", () => { (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen({ navigationUI: "hide" })).catch(() => {}); });
+  document.addEventListener("fullscreenchange", () => $("fullscreen").setAttribute("aria-pressed", String(Boolean(document.fullscreenElement))));
+}
 function applyTheme(theme) {   // "light" | "dark" | null (System)
   if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
   const dark = theme ? theme === "dark" : systemDark();
@@ -1403,7 +1468,7 @@ function drawRepoQr() {
 }
 $("logo").addEventListener("click", () => { drawRepoQr(); $("qrbox").hidden = false; });
 $("qrbox").addEventListener("click", () => { $("qrbox").hidden = true; });
-addEventListener("keydown", e => { if (e.key === "Escape") { $("qrbox").hidden = true; if (!$("roomBox").hidden) closeRoomBox(); } });
+addEventListener("keydown", e => { if (e.key === "Escape") { $("qrbox").hidden = true; if (!$("roomBox").hidden) closeRoomBox(); $("disconnectBox").hidden = true; } });
 $("lang").addEventListener("click", () => {
   const was = lang;
   lang = lang === "de" ? "en" : "de";
