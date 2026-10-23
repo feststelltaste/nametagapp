@@ -17,9 +17,12 @@
   #shadow { position:relative; flex:none; }
   /* Trägerpapier: schmale hellbeige Streifen nur über und unter dem Etikett; links und rechts (in den Zacken) ist kein Rand zu sehen */
   #shadow::before { content:""; position:absolute; left:2.5px; right:2.5px; top:-9px; bottom:-9px; background:#f0e6d0; border-block:1px solid #e2d5b8; }
-  #consent { position:fixed; inset:0; z-index:6; display:flex; align-items:center; justify-content:center; padding:16px; background:var(--bg); overflow:auto; }
+  #consent { position:fixed; inset:0; z-index:6; display:flex; justify-content:center; padding:max(32px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom)); background:var(--bg); overflow:auto; }   /* oben und unten Luft; die Karte zentriert sich mit margin:auto und läuft bei viel Text nicht oben aus dem Bild */
   #consent[hidden] { display:none; }
-  #consent .card { width:min(520px, 100%); background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 4px 24px rgba(0,0,0,.08); }
+  #consent .card { width:min(520px, 100%); margin:auto; background:#fff; border:1px solid var(--line); border-radius:14px; padding:22px 20px; box-shadow:0 4px 24px rgba(0,0,0,.08); }
+  .langs { display:flex; gap:6px; justify-content:flex-end; margin:0 0 14px; }
+  .langs button { font:inherit; font-size:.85rem; font-weight:600; padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--muted); cursor:pointer; }
+  .langs button[aria-pressed="true"] { border-color:var(--accent); color:var(--fg); background:color-mix(in srgb, var(--accent) 12%, transparent); }
   #consent h2 { margin:0 0 8px; font-size:1.25rem; }
   #consent p { margin:8px 0; }
   #consent ul { margin:8px 0 8px 1.1em; padding:0; }
@@ -49,6 +52,9 @@
   #ideas span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #ideas.above { font-weight:600; font-size:clamp(1.1rem, 2vw, 1.6rem); line-height:1.3; transform:translateY(-100%); }   /* Adjektive: über der Blase */
   #ideas[hidden] { display:none; }
+  #fs { position:fixed; left:max(12px, env(safe-area-inset-left)); bottom:max(12px, env(safe-area-inset-bottom)); z-index:3; width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; color:var(--fg); background:#fff; border:1px solid var(--line); border-radius:10px; cursor:pointer; opacity:.45; transition:opacity .15s; -webkit-tap-highlight-color:transparent; }
+  #fs:hover, #fs:focus-visible, #fs[aria-pressed="true"] { opacity:1; }
+  #fs[hidden] { display:none; }
   #lostNote { display:none; position:fixed; left:0; right:0; bottom:8px; text-align:center; font-size:.8rem; color:var(--muted); z-index:2; }
   body.lost #lostNote { display:block; }
   #wait { text-align:center; color:var(--muted); padding:24px; }
@@ -58,6 +64,7 @@
 <body>
 <div id="consent" hidden>
   <div class="card">
+    <div class="langs" role="group" aria-label="Sprache / Language"><button type="button" data-lang="de">Deutsch</button><button type="button" data-lang="en">English</button></div>
     <h2 id="consentTitle"></h2>
     <p id="consentIntro"></p>
     <ul id="consentList"></ul>
@@ -81,6 +88,7 @@
   <div id="welcomeTitle"></div>
   <div id="welcomeSub"></div>
 </header>
+<button type="button" id="fs" hidden aria-pressed="false" aria-label="Vollbild / Full screen" title="Vollbild / Full screen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 <div id="stage">
   <div id="shadow"><img id="tag" alt="Namensschild"></div>
   <div id="wait"><b>No name tag yet</b>Open the editor in the same browser (same address). As soon as a label appears there, you will see it here live.</div>
@@ -173,6 +181,12 @@ if (!roomMode) {
 }
 
 addEventListener("resize", () => { fit(); placeBubble(); });
+// Vollbild (Handy und Desktop), nur wenn der Browser es kann; auf dem iPhone hilft „Zum Home-Bildschirm“
+if (document.fullscreenEnabled) {
+  $("fs").hidden = false;
+  $("fs").addEventListener("click", () => { (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen({ navigationUI: "hide" })).catch(() => {}); });
+  document.addEventListener("fullscreenchange", () => $("fs").setAttribute("aria-pressed", String(Boolean(document.fullscreenElement))));
+}
 // Sprechblase links neben dem Etikett: sie zeigt auf die Stelle, an der das Feld, in dem der Cursor gerade steht, auf dem Etikett erscheint
 // Hashtag-Inspiration: solange das Hashtag-Feld aktiv ist, blenden ein paar graue Begriffe über der Blase auf und ab
 const IDEAS = ["#softwarearchitektur", "#clean-architecture", "#microservices", "#domain-driven-design", "#event-sourcing", "#cqrs", "#hexagonal", "#docs-as-code", "#arc42", "#adr",
@@ -269,7 +283,8 @@ const TEXT = {
         consentHost: "When this page was opened, GitHub Pages (the host of this page) already saw your IP address and browser type. That cannot be avoided before you agree.", consentGithub: "GitHub privacy statement",
         consentMore: "Privacy details", consentNtfy: "ntfy privacy policy" },
 };
-let uiLang = (navigator.language || "en").toLowerCase().startsWith("de") ? "de" : "en";   // Gäste lesen die Zustimmung in der Sprache ihres Handys; eine im Editor gewählte Sprache hat Vorrang
+const phoneLang = (navigator.languages?.length ? navigator.languages : [navigator.language || "en"]).map(l => l.toLowerCase().slice(0, 2)).find(l => l === "de" || l === "en") || "en";   // die erste unterstützte Sprache des Handys
+let uiLang = phoneLang;   // Gäste lesen die Zustimmung in der Sprache ihres Handys; eine im Editor gewählte Sprache hat Vorrang
 try { const saved = localStorage.getItem("meetupapp.lang"); if (saved === "de" || saved === "en") uiLang = saved; } catch {}
 const L = key => TEXT[uiLang][key];
 
@@ -291,7 +306,11 @@ function connectRoom(room) {
   });
 }
 // Zustimmung vor der ersten Verbindung: der Gast erfährt, was an ntfy.sh geht, bevor irgendetwas gesendet wird
-function askConsent(room) {
+// Zustimmungstexte in der gewählten Sprache setzen; die Knöpfe „Deutsch / English“ stellen die Sprache des Handys vor und lassen sie ändern
+let consentRefused = false;
+function renderConsent() {
+  document.documentElement.lang = uiLang;
+  for (const button of document.querySelectorAll(".langs button")) button.setAttribute("aria-pressed", String(button.dataset.lang === uiLang));
   $("consentTitle").textContent = L("consentTitle"); $("consentIntro").textContent = L("consentIntro");
   $("consentList").replaceChildren(...L("consentItems").map(text => Object.assign(document.createElement("li"), { textContent: text })));
   $("consentYes").textContent = L("consentYes"); $("consentNo").textContent = L("consentNo");
@@ -299,9 +318,14 @@ function askConsent(room) {
   $("consentNtfy").textContent = L("consentNtfy"); $("consentNtfy").href = NTFY_PRIVACY;
   const host = $("consentHost"); host.hidden = !/\.github\.io$/i.test(location.hostname);   // nur wenn die Seite wirklich bei GitHub Pages liegt
   if (!host.hidden) { const link = Object.assign(document.createElement("a"), { textContent: L("consentGithub"), href: GITHUB_PRIVACY, target: "_blank", rel: "noopener" }); host.replaceChildren(L("consentHost") + " ", link); }
-  $("consentDone").hidden = true; $("consent").hidden = false;
+  $("consentDone").textContent = L("consentDone"); $("consentDone").hidden = !consentRefused;
+}
+for (const button of document.querySelectorAll(".langs button")) button.addEventListener("click", () => { uiLang = button.dataset.lang; renderConsent(); });
+function askConsent(room) {
+  consentRefused = false; renderConsent(); $("consent").hidden = false;
+  $("consentYes").hidden = $("consentNo").hidden = false;
   $("consentYes").onclick = () => { try { sessionStorage.setItem("consent:" + room.topic, "1"); } catch {} $("consent").hidden = true; connectRoom(room); };
-  $("consentNo").onclick = () => { $("consentDone").textContent = L("consentDone"); $("consentDone").hidden = false; $("consentYes").hidden = $("consentNo").hidden = true; };
+  $("consentNo").onclick = () => { consentRefused = true; renderConsent(); $("consentYes").hidden = $("consentNo").hidden = true; };
 }
 function openRoom() {
   roomSubscription?.close(); roomSubscription = null;
