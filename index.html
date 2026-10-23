@@ -89,6 +89,10 @@
   .sizerow label { margin-top:0; }
   .zoombtns { display:flex; gap:8px; }
   .zoombtns .chip { padding:8px 16px; font-size:.95rem; }
+  .title-row { display:flex; gap:8px; align-items:stretch; }
+  .title-row input { flex:1; min-width:0; }
+  .chip.lock { padding:0 12px; font-size:1.2rem; }
+  .chip.lock[aria-pressed="true"] { background:var(--accent-mid); border-color:var(--accent); color:var(--fg); }
   .name-row { display:flex; gap:8px; align-items:stretch; }
   .name-row input#name { flex:1; min-width:0; }
   .chip.two { padding:0 8px; font-size:.7rem; line-height:1.2; }
@@ -144,7 +148,10 @@
   <div class="col">
   <form id="form" autocomplete="off">
     <label for="title" data-i18n="titleLabel">Title text</label>
-    <input id="title" value="" data-i18n-ph="titlePh" placeholder="Your event title">
+    <div class="title-row">
+      <input id="title" value="" data-i18n-ph="titlePh" placeholder="Your event title">
+      <button type="button" id="titleLock" class="chip lock" aria-pressed="false" data-i18n-title="lockTitle" data-i18n-aria="lockTitle" title="Lock the title: “Clear” then keeps it" aria-label="Lock the title: “Clear” then keeps it">🔓</button>
+    </div>
 
     <label for="greeting" data-i18n="greetingLabel">Intro line (optional)</label>
     <input id="greeting" value="" data-i18n-ph="greetingPh" placeholder="e.g. Hello, I'm">
@@ -288,7 +295,7 @@ const $ = id => document.getElementById(id);
 const T = {
   de: {
     langTitle: "Sprache / Language", themeTitle: "Hell / Dunkel umschalten", themeAria: "Darstellung umschalten",
-    titleLabel: "Titeltext", titlePh: "Titel deiner Veranstaltung", greetingLabel: "Zwischenzeile (optional)", greetingPh: "z. B. Hallo, ich bin",
+    titleLabel: "Titeltext", lockTitle: "Titel schützen: „Leeren“ lässt ihn dann stehen", titlePh: "Titel deiner Veranstaltung", greetingLabel: "Zwischenzeile (optional)", greetingPh: "z. B. Hallo, ich bin",
     maleTitle: "Männliche Form (Großartiger)", maleAria: "Mann", femaleTitle: "Weibliche Form (Großartige)", femaleAria: "Frau",
     dice1Title: "Zufälliges positives Adjektiv", dice2Title: "Zwei zufällige positive Adjektive", dice3Title: "Drei zufällige positive Adjektive",
     backTitle: "Vorherige Zwischenzeile zurückholen", clearGreetingTitle: "Zwischenzeile leeren",
@@ -329,7 +336,7 @@ const T = {
   },
   en: {
     langTitle: "Sprache / Language", themeTitle: "Toggle light / dark", themeAria: "Switch appearance",
-    titleLabel: "Title text", titlePh: "Your event title", greetingLabel: "Intro line (optional)", greetingPh: "e.g. Hello, I'm",
+    titleLabel: "Title text", lockTitle: "Lock the title: “Clear” then keeps it", titlePh: "Your event title", greetingLabel: "Intro line (optional)", greetingPh: "e.g. Hello, I'm",
     maleTitle: "Male form", maleAria: "Man", femaleTitle: "Female form", femaleAria: "Woman",
     dice1Title: "Random positive adjective", dice2Title: "Two random positive adjectives", dice3Title: "Three random positive adjectives",
     backTitle: "Restore previous intro line", clearGreetingTitle: "Clear intro line",
@@ -626,7 +633,7 @@ const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length"];
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
-    const state = { gender, rollCount, zoom, sideCm };
+    const state = { gender, rollCount, zoom, sideCm, titleLocked: titleLocked() };
     for (const id of TEXT_FIELDS) state[id] = $(id).value;
     for (const id of CHECK_FIELDS) state[id] = $(id).checked;
     localStorage.setItem(FIELDS_KEY, JSON.stringify(state));
@@ -1158,12 +1165,21 @@ $("clear").addEventListener("click", () => {
   lastRoll = null;
   $("name").value = "";
   $("tags").value = "";
+  if (!titleLocked()) $("title").value = "";   // Schloss offen: auch der Titel wird geleert; mit Schloss bleibt er stehen
   updateCheckOff();   // das Feld wurde per Skript geleert: der Haken neben dem Namen muss mit weg
   render();
   $("name").focus();
 });
 $("length").addEventListener("input", render);
 $("autoLength").addEventListener("change", render);
+// Schloss am Titel: zu = "Clear" lässt den Titel stehen, offen (Standard) = "Clear" leert ihn mit. Der Titel bleibt immer änderbar.
+function setTitleLock(on) {
+  $("titleLock").setAttribute("aria-pressed", String(on));
+  $("titleLock").textContent = on ? "🔒" : "🔓";
+}
+const titleLocked = () => $("titleLock").getAttribute("aria-pressed") === "true";
+$("titleLock").addEventListener("click", () => { setTitleLock(!titleLocked()); saveFields(); });
+
 // Gespeicherte Eingaben wiederherstellen (vor dem ersten Zeichnen).
 function restoreFields() {
   let state;
@@ -1178,6 +1194,7 @@ function restoreFields() {
   if ([1, 2, 3].includes(state.rollCount)) rollCount = state.rollCount;
   if ([1, 0.75, 0.5].includes(state.zoom)) zoom = state.zoom;
   if ([0, 0.5, 1].includes(state.sideCm)) sideCm = state.sideCm;
+  if (state.titleLocked === true) setTitleLock(true);
 }
 restoreFields();
 
