@@ -36,21 +36,27 @@
   #logo { cursor:default; -webkit-tap-highlight-color:transparent; }   /* sieht nicht wie ein Link aus */
   .modal { position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); padding:16px; overflow:auto; }
   .modal[hidden] { display:none; }
-  .modal .card { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:14px; padding:18px; width:min(1040px, 100%); max-height:100%; overflow:auto; box-shadow:0 10px 40px rgba(0,0,0,.35); }
+  .modal .card { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:14px; padding:18px; width:min(860px, 100%); max-height:100%; overflow:auto; box-shadow:0 10px 40px rgba(0,0,0,.35); }
   .modal h2 { margin:0 0 8px; font-size:1.1rem; }
   .modal p { margin:12px 0 6px; font-size:.9rem; }
-  .mirrorstate { padding:8px 10px; border-radius:8px; background:var(--accent-soft); font-size:.9rem; }
-  .pair-grid { display:grid; grid-template-columns:1fr auto 1fr; gap:20px; align-items:center; margin-top:12px; }
-  .pair-step p { margin:0 0 8px; }
-  .pair-arrow { font-size:3rem; line-height:1; color:var(--accent); user-select:none; }
-  #mirrorAnswer { min-height:min(30vh, 220px); }
-  @media (max-width: 760px) { .pair-grid { grid-template-columns:1fr; } .pair-arrow { transform:rotate(90deg); justify-self:center; font-size:2rem; } }
-  #mirrorQr svg { display:block; width:min(60vw, 36vh, 300px); height:auto; margin:8px auto; border:1px solid var(--line); border-radius:6px; }
-  #mirrorConnect, .mirrorbtns button { width:auto; margin:0; padding:8px 14px; background:transparent; color:var(--fg); border:1px solid var(--line); font-size:.9rem; }
-  #mirrorConnect { margin-top:8px; background:var(--accent-soft); border-color:var(--accent-edge); }
-  #mirrorAnswer { width:100%; font-family:ui-monospace, Consolas, monospace; font-size:.75rem; }
-  .mirroreach { display:flex; gap:8px; align-items:center; font-weight:400; font-size:.9rem; margin-top:12px; }
-  .mirrorbtns { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+  .room-grid { display:grid; grid-template-columns:minmax(0, 340px) 1fr; gap:28px; align-items:center; margin-top:12px; }
+  #roomQr svg { display:block; width:100%; max-width:min(340px, 52vh); height:auto; border:1px solid var(--line); border-radius:6px; }
+  .room-side p { margin:0 0 10px; }
+  .roomwarn { padding:10px 12px; border-radius:8px; background:rgba(234,179,8,.16); border:1px solid rgba(234,179,8,.5); font-size:.9rem; }
+  .roomwarn b { font-weight:700; }
+  .roombtns .roomgo { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600; }
+  .roomstate { margin-top:10px; padding:8px 10px; border-radius:8px; background:var(--accent-soft); font-size:.9rem; }
+  .roomstate.bad { background:rgba(220,38,38,.14); }
+  .linkrow { display:flex; gap:8px; }
+  .linkrow input { flex:1; min-width:0; font-size:.75rem; }
+  .linkrow button, .roombtns button { width:auto; margin:0; padding:8px 14px; background:transparent; color:var(--fg); border:1px solid var(--line); font-size:.9rem; }
+  .roomeach { display:flex; gap:8px; align-items:center; font-weight:400; font-size:.9rem; margin-top:12px; }
+  .roombtns { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+  .roombtns #roomStop { margin-right:auto; color:var(--muted); }
+  @media (max-width: 700px) { .room-grid { grid-template-columns:1fr; } }
+  .welcome-row { display:flex; gap:8px; align-items:stretch; }
+  .welcome-fields { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+  .welcome-row .chip { padding:0 12px; font-size:1.1rem; }
   #qrbox { position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); }
   #qrbox[hidden] { display:none; }
   #qrbox .card { background:#fff; color:#1c1917; border-radius:14px; padding:20px 20px 14px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.35); max-width:92vw; }
@@ -146,7 +152,7 @@
 </head>
 <body>
 <main>
-  <div class="head"><h1><span id="logo">NametagApp</span> <small>by feststelltaste</small></h1><span class="headbtns"><button id="openViewTop" type="button" class="iconbtn" data-i18n-title="openTop" data-i18n-aria="openTop" title="Open the second screen (live view) in a new window" aria-label="Open the second screen (live view) in a new window"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button><button id="mirrorBtn" type="button" class="iconbtn" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm10-2h2v2h-2zm4 0h2v2h-2zm-6 4h2v2h-2zm4 0h4v2h-4zm-2 2h2v2h-2zm4 0h2v2h-2z"/></svg></button><button id="lang" type="button" data-i18n-title="langTitle" title="Sprache / Language">EN</button><button id="theme" type="button" data-i18n-title="themeTitle" data-i18n-aria="themeAria" title="Toggle light / dark" aria-label="Switch appearance">🌙</button></span></div>
+  <div class="head"><h1><span id="logo">NametagApp</span> <small>by feststelltaste</small></h1><span class="headbtns"><button id="openViewTop" type="button" class="iconbtn" data-i18n-title="openTop" data-i18n-aria="openTop" title="Open the second screen (live view) in a new window" aria-label="Open the second screen (live view) in a new window"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button><button id="roomBtn" type="button" class="iconbtn" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm10-2h2v2h-2zm4 0h2v2h-2zm-6 4h2v2h-2zm4 0h4v2h-4zm-2 2h2v2h-2zm4 0h2v2h-2z"/></svg></button><button id="lang" type="button" data-i18n-title="langTitle" title="Sprache / Language">EN</button><button id="theme" type="button" data-i18n-title="themeTitle" data-i18n-aria="themeAria" title="Toggle light / dark" aria-label="Switch appearance">🌙</button></span></div>
 
   <div class="col">
   <form id="form" autocomplete="off">
@@ -250,36 +256,45 @@
 
     <button id="openView" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n-title="openViewTitle" data-i18n="openView" title="Opens view.html in a second window, e.g. for the other monitor">🖥 Live view in new window</button>
     <label for="welcomeTitle" style="margin-top:12px" data-i18n="welcomeLabel">Second screen text (optional)</label>
-    <input id="welcomeTitle" type="text" data-i18n-ph="welcomeTitlePh" placeholder="Welcome to the meetup!">
-    <input id="welcomeSub" type="text" data-i18n-ph="welcomeSubPh" placeholder="Your name tag is waiting here!" style="margin-top:6px" aria-label="Second screen text, smaller line">
+    <div class="welcome-row">
+      <div class="welcome-fields">
+        <input id="welcomeTitle" type="text" data-i18n-ph="welcomeTitlePh" placeholder="Welcome!">
+        <input id="welcomeSub" type="text" data-i18n-ph="welcomeSubPh" placeholder="Get your name tag here!" aria-label="Second screen text, smaller line">
+      </div>
+      <button type="button" id="welcomeClear" class="chip" data-i18n-title="welcomeClearTitle" data-i18n-aria="welcomeClearTitle" title="Clear the second screen text" aria-label="Clear the second screen text">🗑</button>
+    </div>
   </section>
   </div>
 
   <footer class="foot">© Markus Harrer · <a href="https://github.com/feststelltaste/nametagapp/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> · <a href="https://github.com/feststelltaste/nametagapp" target="_blank" rel="noopener">github.com/feststelltaste/nametagapp</a></footer>
 
-  <div id="mirrorBox" class="modal" hidden>
+  <div id="roomBox" class="modal" hidden>
     <div class="card">
-      <h2 data-i18n="mirrorHeading">Connect a second device (mirror mode)</h2>
-      <div id="mirrorState" class="mirrorstate"></div>
-      <div id="mirrorSteps" class="pair-grid">
-        <section class="pair-step">
-          <p data-i18n="mirrorStep1">1. Open on the second device: scan the QR code or send the link.</p>
-          <div id="mirrorQr"></div>
-          <input id="mirrorLink" type="hidden">
-        </section>
-        <div class="pair-arrow" aria-hidden="true">➜</div>
-        <section class="pair-step">
-          <p data-i18n="mirrorStep2">2. An answer code appears there. Paste it here:</p>
-          <textarea id="mirrorAnswer" rows="6" spellcheck="false"></textarea>
-          <button type="button" id="mirrorConnect" data-i18n="connect">Connect</button>
-        </section>
+      <h2 data-i18n="roomHeading">Open the second screen on another device</h2>
+      <div id="roomOff">
+        <p data-i18n="roomIntro">With this, a phone or tablet can show the label live: it scans a QR code and follows every change.</p>
+        <p class="roomwarn" data-i18n-html="roomDisclosure">…</p>
+        <div class="roombtns">
+          <button type="button" id="roomCancel" data-i18n="cancel">Cancel</button>
+          <button type="button" id="roomStart" class="roomgo" data-i18n="roomStart">Start sharing</button>
+        </div>
       </div>
-      <label class="mirroreach"><input type="checkbox" id="mirrorEach" style="width:auto"> <span data-i18n="mirrorEach">Create a new QR code after each print (the old one expires)</span></label>
-      <div class="mirrorbtns">
-        <button type="button" id="mirrorReset" data-i18n="repair">Pair again</button>
-        <button type="button" id="mirrorClose" data-i18n="close">Close</button>
+      <div id="roomOn" hidden>
+        <div class="room-grid">
+          <div id="roomQr" aria-label="QR code"></div>
+          <div class="room-side">
+            <p data-i18n="roomExplain">Scan the QR code with a phone or tablet, or open the link there. The label then follows live.</p>
+            <div class="linkrow"><input id="roomLink" readonly aria-label="Link"><button type="button" id="roomCopy" data-i18n="copy">Copy</button></div>
+            <div id="roomState" class="roomstate"></div>
+            <label class="roomeach"><input type="checkbox" id="roomEach" style="width:auto"> <span data-i18n="roomEach">New QR code after each print</span></label>
+          </div>
+        </div>
+        <div class="roombtns">
+          <button type="button" id="roomStop" data-i18n="roomStop">Stop sharing</button>
+          <button type="button" id="roomNew" data-i18n="roomNew">New code</button>
+          <button type="button" id="roomClose" data-i18n="close">Close</button>
+        </div>
       </div>
-      <div class="hint" data-i18n="mirrorHint">The connection runs directly between the two devices; names do not go through any server. Only a public STUN server is asked to find the address. After a reload you have to pair again.</div>
     </div>
   </div>
   <div id="qrbox" hidden><div class="card"><canvas id="qrcanvas" aria-label="QR-Code"></canvas><div class="url">feststelltaste.github.io/nametagapp</div></div></div>
@@ -287,18 +302,15 @@
 </main>
 
 <script src="vendor/qrcode.js"></script>
-<script src="mirror.js"></script>
+<script src="label.js"></script>
+<script src="relay.js"></script>
 <script>
 "use strict";
 
 // ---------- Etikett zeichnen ----------
-const PREVIEW_SCALE = 3;   // Vorschau in 3-facher Auflösung, damit sie glatt statt pixelig aussieht
 let zoom = 1;   // Druckgröße: 1, 0.75 oder 0.5 (Schrift kleiner, die Etikettenbreite bleibt)
 let sideCm = 0.5;   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom)
-const WIDTH = 384, MARGIN = 10, DOTS_PER_MM = 8;   // WIDTH = Druckbreite des Druckers in Punkten
-const FONT_SANS = '"Arial Black", "Segoe UI", Arial, sans-serif';
-const FONT_TEXT = 'Arial, "Segoe UI", sans-serif';
-const FONT_CODE = 'Consolas, "Cascadia Mono", "Courier New", monospace';
+const { PREVIEW_SCALE, WIDTH, DOTS_PER_MM, firstName } = Label;   // Etikett-Berechnung und -Zeichnung: label.js
 
 const $ = id => document.getElementById(id);
 
@@ -327,17 +339,17 @@ const T = {
     print: "Drucken", lengthLabel: "Etikettenlänge (mm, Papier läuft quer)", autoLength: "Länge automatisch aus dem Inhalt berechnen",
     flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
     openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
-    openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", welcomeLabel: "Text für den zweiten Bildschirm (optional)", welcomeTitlePh: "Willkommen beim Meetup!", welcomeSubPh: "Hier gibt es dein Namensschild!",
-    mirror: "📡 Mit zweitem Gerät verbinden", mirrorOn: "📡 Zweites Gerät verbunden", mirrorTitle: "Spiegelt das Etikett live auf ein zweites Gerät (WebRTC)",
-    mirrorHeading: "Zweites Gerät verbinden (Spiegelmodus)", connect: "Verbinden", repair: "Neu koppeln", close: "Schließen",
-    mirrorStep1: "1. Auf dem zweiten Gerät öffnen: QR-Code scannen oder den Link verschicken.",
-    mirrorStep2: "2. Dort erscheint ein Antwort-Code. Füge ihn hier ein:",
-    mirrorHint: "Die Verbindung läuft direkt zwischen den beiden Geräten, die Namen gehen über keinen Server. Nur zum Finden der Adresse wird ein öffentlicher STUN-Server gefragt. Nach einem Neuladen muss neu gekoppelt werden.",
-    mirrorPreparing: "Verbindung wird vorbereitet …", mirrorWaiting: "Warte auf den Antwort-Code des zweiten Geräts.",
-    mirrorConnecting: "Verbinde … (kann ein paar Sekunden dauern)", mirrorConnected: "✅ Verbunden – jedes Etikett erscheint live auf dem zweiten Gerät.",
-    mirrorClosed: "Verbindung getrennt – bitte neu koppeln.", mirrorExpired: "Der Code ist abgelaufen (5 Minuten). Klicke auf „Neu koppeln“.",
-    mirrorEach: "Nach jedem Druck neuen QR-Code erzeugen (der alte verfällt)", mirrorError: m => `Fehler: ${m}`, mirrorBadCode: "Das ist kein gültiger Antwort-Code.",
-    mirrorTimeout: "Keine Verbindung zustande gekommen. Prüfe, ob beide Geräte online sind, und koppele neu.",
+    openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", welcomeLabel: "Text für den zweiten Bildschirm (optional)", welcomeTitlePh: "Willkommen bei uns!", welcomeSubPh: "Hier gibt es dein Namensschild!", welcomeClearTitle: "Text für den zweiten Bildschirm leeren",
+    close: "Schließen", copy: "Kopieren", copied: "Kopiert",
+    roomBtn: "Zweiter Bildschirm auf einem anderen Gerät (QR-Code)", roomBtnOn: "Zweiter Bildschirm läuft (QR-Code)",
+    roomHeading: "Zweiten Bildschirm auf einem anderen Gerät öffnen",
+    roomExplain: "Scanne den QR-Code mit einem Handy oder Tablet oder öffne den Link dort. Das Etikett läuft dann live mit.",
+    roomEach: "Nach jedem Druck ein neuer QR-Code (jeder Gast behält nur sein eigenes Namensschild)",
+    roomNew: "Neuer Code", roomStop: "Teilen beenden", cancel: "Abbrechen", roomStart: "Teilen starten",
+    roomIntro: "Damit zeigt ein Handy oder Tablet das Etikett live: Es scannt einen QR-Code und folgt jeder Änderung.",
+    roomDisclosure: "<b>Bevor du startest:</b> Titel, Name, Zwischenzeile und Hashtags gehen <b>Ende-zu-Ende verschlüsselt</b> über den öffentlichen Dienst <b>ntfy.sh</b> (Drittanbieter). Der Schlüssel steckt nur im QR-Code, der Dienst sieht nur verschlüsselte Daten, aber IP-Adressen und Zeitpunkte, und speichert die Nachrichten bis zu 12 Stunden. Die kostenlose Nutzung ist auf etwa 250 Nachrichten pro Tag begrenzt. Ob du dafür einen Auftragsverarbeitungsvertrag oder eine Information der Teilnehmer brauchst, musst du selbst prüfen. Ohne Teilen geht nichts nach außen.",
+    roomCount: n => `Heute gesendet: ${n} von etwa 250 Nachrichten (Limit des kostenlosen Dienstes).`, roomLimit: "Limit des kostenlosen Dienstes erreicht. Es geht nach einer Pause oder morgen weiter.",
+    roomLive: "Läuft: Änderungen gehen sofort an alle Geräte, die den Link geöffnet haben.", roomOffline: "Kein Kontakt zum Relay-Dienst (Internet?). Der zweite Bildschirm bekommt erst wieder Änderungen, wenn er erreichbar ist.", roomOff: "Wird nicht geteilt.",
     clear: "Leeren", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLabel: "Seitenränder (cm)",
     sizeInfo: (l, w) => `Etikett ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Gesendet in ${sec} s (${bytes} Bytes) – warte auf den Druck …`,
@@ -369,17 +381,17 @@ const T = {
     print: "Print", lengthLabel: "Label length (mm, paper runs sideways)", autoLength: "Calculate length automatically from the content",
     flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
     openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
-    openTop: "Open the second screen (live view) in a new window", welcomeLabel: "Second screen text (optional)", welcomeTitlePh: "Welcome to the meetup!", welcomeSubPh: "Your name tag is waiting here!",
-    mirror: "📡 Connect a second device", mirrorOn: "📡 Second device connected", mirrorTitle: "Mirrors the label live to a second device (WebRTC)",
-    mirrorHeading: "Connect a second device (mirror mode)", connect: "Connect", repair: "Pair again", close: "Close",
-    mirrorStep1: "1. Open on the second device: scan the QR code or send the link.",
-    mirrorStep2: "2. An answer code appears there. Paste it here:",
-    mirrorHint: "The connection runs directly between the two devices; names do not go through any server. Only a public STUN server is asked to find the address. After a reload you have to pair again.",
-    mirrorPreparing: "Preparing the connection …", mirrorWaiting: "Waiting for the answer code from the second device.",
-    mirrorConnecting: "Connecting … (this can take a few seconds)", mirrorConnected: "✅ Connected – every label appears live on the second device.",
-    mirrorClosed: "Connection lost – please pair again.", mirrorExpired: "The code has expired (5 minutes). Click “Pair again”.",
-    mirrorEach: "Create a new QR code after each print (the old one expires)", mirrorError: m => `Error: ${m}`, mirrorBadCode: "That is not a valid answer code.",
-    mirrorTimeout: "No connection could be made. Check that both devices are online and pair again.",
+    openTop: "Open the second screen (live view) in a new window", welcomeLabel: "Second screen text (optional)", welcomeTitlePh: "Welcome!", welcomeSubPh: "Get your name tag here!", welcomeClearTitle: "Clear the second screen text",
+    close: "Close", copy: "Copy", copied: "Copied",
+    roomBtn: "Second screen on another device (QR code)", roomBtnOn: "Second screen is running (QR code)",
+    roomHeading: "Open the second screen on another device",
+    roomExplain: "Scan the QR code with a phone or tablet, or open the link there. The label then follows live.",
+    roomEach: "New QR code after each print (each guest only keeps their own name tag)",
+    roomNew: "New code", roomStop: "Stop sharing", cancel: "Cancel", roomStart: "Start sharing",
+    roomIntro: "With this, a phone or tablet can show the label live: it scans a QR code and follows every change.",
+    roomDisclosure: "<b>Before you start:</b> title, name, intro line and hashtags go <b>end-to-end encrypted</b> through the public service <b>ntfy.sh</b> (a third party). The key is only in the QR code; the service only sees encrypted data, but also IP addresses and timing, and keeps the messages for up to 12 hours. Free use is limited to about 250 messages per day. Whether you need a data processing agreement or have to inform participants is for you to check. Without sharing, nothing leaves this device.",
+    roomCount: n => `Sent today: ${n} of about 250 messages (limit of the free service).`, roomLimit: "Limit of the free service reached. It continues after a pause or tomorrow.",
+    roomLive: "Running: changes go to every device that has opened the link right away.", roomOffline: "The relay is not reachable (internet?). The second screen gets changes again once it is.", roomOff: "Not shared.",
     clear: "Clear", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLabel: "Side margins (cm)",
     sizeInfo: (l, w) => `Label ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Sent in ${sec} s (${bytes} bytes) – waiting for the print …`,
@@ -405,57 +417,16 @@ function applyI18n() {
   // Männlich/weiblich gibt es nur im Deutschen (Adjektivendungen); englische Adjektive bleiben gleich
   $("genderM").hidden = $("genderF").hidden = lang !== "de";
   if (typeof refreshColumnOptions === "function") refreshColumnOptions();
-  if (typeof updateMirrorUi === "function") updateMirrorUi();
+  if (typeof updateRoomUi === "function") updateRoomUi();
   if (typeof renderList === "function") renderList();
 }
 const canvas = $("canvas");                       // Vorschau (liegend)
 const printSource = document.createElement("canvas"); // Druckbild (gedreht)
 const printCtx = () => printSource.getContext("2d", { willReadFrequently: true });   // wird oft zurückgelesen (Schwellwert, Senden)
 
-function wrapWords(ctx, text, maxWidth) {
-  const lines = [];
-  let line = "";
-  for (const word of text.split(/\s+/).filter(Boolean)) {
-    const trial = line ? line + " " + word : word;
-    if (!line || ctx.measureText(trial).width <= maxWidth) line = trial;
-    else { lines.push(line); line = word; }
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
-// Größte Schrift (max..min), bei der der Text in höchstens maxLines Zeilen passt.
-function fitName(ctx, text, maxWidth, maxSize = 84, minSize = 28, maxLines = 3) {
-  for (let size = maxSize; size >= minSize; size -= 2) {
-    ctx.font = `${size}px ${FONT_SANS}`;
-    const lines = wrapWords(ctx, text, maxWidth);
-    const widest = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
-    if (lines.length <= maxLines && widest <= maxWidth) return { size, lines };
-  }
-  ctx.font = `${minSize}px ${FONT_SANS}`;
-  return { size: minSize, lines: wrapWords(ctx, text, maxWidth) };
-}
-
-// Jede Zeile der Eingabe bleibt eine eigene Zeile auf dem Etikett; zu lange Zeilen brechen dort selbst um.
-function parseTags(raw) {
-  return raw.split(/\r?\n/)
-    .map(line => line.split(/[\s,]+/).filter(Boolean).map(t => (t.startsWith("#") ? t : "#" + t)))
-    .filter(line => line.length);
-}
-
 // Aus "Dr. Anna Maria Müller" wird "Anna"; bei "Müller, Anna" wird "Anna".
 const firstOnly = () => $("firstOnly").getAttribute("aria-pressed") === "true";
 const setFirstOnly = on => $("firstOnly").setAttribute("aria-pressed", String(on));
-
-function firstName(full) {
-  full = full.trim();
-  if (full.includes(",")) full = full.split(",").slice(1).join(" ").trim();
-  const words = full.split(/\s+/).filter(w => !/^(dr|prof|mr|mrs|ms)\.?$/i.test(w));
-  return words[0] || full;
-}
-function displayName(full) {
-  return firstOnly() ? firstName(full) : full.trim();
-}
 
 // Etikett quer: Das Layout entsteht liegend (Länge x 384 px) und wird zum Drucken um 90° gedreht,
 // sodass der Text entlang des Papiervorschubs läuft.
@@ -472,145 +443,29 @@ function applyPreviewSize() {
 }
 new ResizeObserver(applyPreviewSize).observe(canvas.closest(".preview"));
 
+// Eingaben des Editors als Modell für label.js (dasselbe Modell geht an die Live-Ansicht)
+function labelModel() {
+  return {
+    title: $("title").value, greeting: $("greeting").value, name: $("name").value, firstOnly: firstOnly(), tags: $("tags").value,
+    autoLength: $("autoLength").checked, lengthMm: parseFloat($("length").value) || 80, zoom, sideCm,
+  };
+}
+
 function drawLabel() {
-  const title = $("title").value.trim();
-  const greeting = $("greeting").value.trim();
-  const name = displayName($("name").value);
-  const tags = parseTags($("tags").value);
-  const probe = document.createElement("canvas").getContext("2d");
-  const TITLE_INSET = 14;   // Titel etwas weiter vom oberen Rand weg
-  const titleSize = 26, titleLineH = 32, greetSize = 36, greetLineH = 44;
-  const tagSize = 30, chipPadX = 6, chipH = 33, chipGap = 14, tagRowGap = 3;   // tagRowGap: Abstand zwischen zwei Hashtag-Zeilen (chipGap gilt waagerecht)
+  const model = labelModel();
+  const plan = Label.plan(model);
+  if (model.autoLength) $("length").value = Math.round(plan.lengthPx * zoom / DOTS_PER_MM);   // gedruckte Länge in mm
+  $("length").disabled = model.autoLength;
 
-  // Misst Titel, Name und Hashtags für eine gegebene Etikettenlänge (in Punkten).
-  function measure(lengthPx, sideMargin) {
-    const inner = Math.max(60, lengthPx - 2 * sideMargin);
-    probe.font = `bold ${titleSize}px ${FONT_TEXT}`;
-    const titleLines = title ? wrapWords(probe, title, inner) : [];
-    const titleWidth = Math.max(0, ...titleLines.map(l => probe.measureText(l).width));
-
-    probe.font = `${greetSize}px ${FONT_TEXT}`;
-    const greetLines = greeting ? wrapWords(probe, greeting, inner) : [];
-    const greetWidth = Math.max(0, ...greetLines.map(l => probe.measureText(l).width));
-
-    probe.font = `${tagSize}px ${FONT_CODE}`;
-    const rows = [];
-    for (const line of tags) {   // jede Eingabezeile beginnt eine neue Etikettzeile
-      let row = [], rowW = 0;
-      for (const tag of line) {
-        const w = Math.min(inner, Math.ceil(probe.measureText(tag).width) + 2 * chipPadX);
-        if (row.length && rowW + chipGap + w > inner) { rows.push(row); row = []; rowW = 0; }
-        row.push({ tag, w });
-        rowW += (row.length > 1 ? chipGap : 0) + w;
-      }
-      if (row.length) rows.push(row);
-    }
-    const rowsWidth = Math.max(0, ...rows.map(r => r.reduce((s, c) => s + c.w, 0) + chipGap * (r.length - 1)));
-
-    // Name so groß wie möglich, solange alles in die 384 px Höhe passt.
-    const titleHeight = titleLines.length ? TITLE_INSET + titleLines.length * titleLineH + 8 : 0;
-    const greetHeight = greetLines.length * greetLineH;
-    const fixedHeight = 2 * MARGIN + titleHeight + greetHeight + rows.length * (chipH + tagRowGap);
-    let fit = { size: 0, lines: [] };
-    // Bevorzugt eine Zeile (lange Namen werden dafür kleiner), erst unter 48 px wird umbrochen.
-    if (name) {
-      search: for (const [maxLines, minSize] of [[1, 48], [2, 28]]) {
-        for (let maxSize = 120; maxSize >= minSize; maxSize -= 4) {
-          fit = fitName(probe, name, inner, maxSize, minSize, maxLines);
-          if (fit.lines.length <= maxLines &&
-              fixedHeight + fit.lines.length * Math.round(fit.size * 1.12) + 14 <= WIDTH) break search;
-        }
-      }
-    }
-    probe.font = `${fit.size}px ${FONT_SANS}`;
-    const nameWidth = Math.max(0, ...fit.lines.map(l => probe.measureText(l).width));
-    const nameLineH = Math.round(fit.size * 1.12);
-    const bodyHeight = greetHeight + rows.length * (chipH + tagRowGap) + fit.lines.length * nameLineH + (fit.lines.length ? 14 : 0);
-    return { titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight,
-             usedWidth: Math.max(titleWidth, greetWidth, rowsWidth, nameWidth) };
-  }
-
-  // Länge und Seitenränder gelten für das gedruckte Etikett. Das Layout wird mit dem Zoom verkleinert, deshalb rechnen wir
-  // sie in Layout-Punkte um (durch den Zoom teilen); gedruckt bleiben Rand und maximale Länge so groß wie eingestellt.
-  function planFor(z) {
-    const sideMargin = sideCm * 10 * DOTS_PER_MM / z;
-    const minPx = 25 * DOTS_PER_MM / z, maxPx = 100 * DOTS_PER_MM / z;   // 25 bis 100 mm gedruckt
-    const clamp = v => Math.max(minPx, Math.min(maxPx, v));
-    let lengthPx, m;
-    if ($("autoLength").checked) {
-      m = measure(maxPx, sideMargin);   // längere Namen werden kleiner statt das Etikett zu verlängern
-      lengthPx = clamp(Math.ceil(m.usedWidth) + 2 * sideMargin);
-    } else {
-      lengthPx = clamp(Math.round((parseFloat($("length").value) || 80) * DOTS_PER_MM / z));
-    }
-    return { lengthPx, sideMargin, m: measure(lengthPx, sideMargin) };
-  }
-  const plan = planFor(zoom);
-  const { lengthPx, m } = plan;
-  if ($("autoLength").checked) $("length").value = Math.round(lengthPx * zoom / DOTS_PER_MM);   // gedruckte Länge in mm
-  $("length").disabled = $("autoLength").checked;
-  const fullPrintedPx = zoom === 1 ? lengthPx : planFor(1).lengthPx;   // gedruckte Länge bei Zoom 1: bestimmt den Anzeigemaßstab
-  const { titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight } = m;
-
-  // Zeichnet das liegende Etikett; scale > 1 ergibt dasselbe Bild in höherer Auflösung (glatte Vorschau).
-  function paint(scale) {
-    const layout = document.createElement("canvas");
-    layout.width = lengthPx * scale;
-    layout.height = WIDTH * scale;
-    const lctx = layout.getContext("2d");
-    lctx.scale(scale, scale);
-    lctx.fillStyle = "#fff";
-    lctx.fillRect(0, 0, lengthPx, WIDTH);
-    lctx.fillStyle = "#000";
-    lctx.textAlign = "center";
-    lctx.textBaseline = "middle";
-
-    // Der Titel (Meetup-Name) steht immer ganz oben; der Rest wird im verbleibenden Platz zentriert.
-    let y = MARGIN + (titleLines.length ? TITLE_INSET : 0);
-    lctx.font = `bold ${titleSize}px ${FONT_TEXT}`;
-    for (const line of titleLines) {
-      lctx.fillText(line, lengthPx / 2, y + titleLineH / 2);
-      y += titleLineH;
-    }
-    y = MARGIN + titleHeight;
-    y += Math.max(0, (WIDTH - MARGIN - y - bodyHeight) / 2);
-
-    lctx.font = `${greetSize}px ${FONT_TEXT}`;
-    for (const line of greetLines) {
-      lctx.fillText(line, lengthPx / 2, y + greetLineH / 2);
-      y += greetLineH;
-    }
-
-    lctx.font = `${fit.size}px ${FONT_SANS}`;
-    for (const line of fit.lines) {
-      lctx.fillText(line, lengthPx / 2, y + nameLineH / 2);
-      y += nameLineH;
-    }
-    if (fit.lines.length) y += 14;
-
-    lctx.font = `${tagSize}px ${FONT_CODE}`;
-    for (const r of rows) {
-      const total = r.reduce((s, c) => s + c.w, 0) + chipGap * (r.length - 1);
-      let x = (lengthPx - total) / 2;
-      for (const chip of r) {
-        lctx.fillText(chip.tag, x + chip.w / 2, y + chipH / 2 + 1, chip.w - 2 * chipPadX / 2);
-        x += chip.w + chipGap;
-      }
-      y += chipH + tagRowGap;
-    }
-    return layout;
-  }
-
-  // Vorschau: liegend, in 3-facher Auflösung und glatt (das gedruckte 1-Bit-Bild unten ist dasselbe Layout in Punkten).
-  // Das Etikett ist immer 48 mm breit (auf dem Bild die Höhe); mit kleinerer Schrift wird nur die Länge kürzer.
-  const hi = paint(PREVIEW_SCALE * zoom);
-  canvas.width = Math.round(lengthPx * zoom * PREVIEW_SCALE);
-  canvas.height = WIDTH * PREVIEW_SCALE;
-  canvas.getContext("2d").drawImage(hi, 0, Math.round((canvas.height - hi.height) / 2));   // Inhalt mittig auf der festen Breite
-  previewFullPx = fullPrintedPx;
-  previewPrintedPx = lengthPx * zoom;
+  // Vorschau: liegend, in 3-facher Auflösung und glatt; immer 48 mm breit, mit kleinerer Schrift wird nur die Länge kürzer
+  const preview = Label.previewCanvas(plan, zoom);
+  canvas.width = preview.width;
+  canvas.height = preview.height;
+  canvas.getContext("2d").drawImage(preview, 0, 0);
+  previewFullPx = plan.fullPrintedPx;
+  previewPrintedPx = plan.printedPx;
   applyPreviewSize();
-  const layout = paint(zoom);   // dasselbe Etikett in Druckgröße; bei Zoom < 1 neu gezeichnet statt verkleinert, damit die Schrift scharf bleibt
+  const layout = plan.paint(zoom);   // dasselbe Etikett in Druckgröße; bei Zoom < 1 neu gezeichnet statt verkleinert, damit die Schrift scharf bleibt
 
   // Druckbild: um 90° gedreht (Layout-x läuft entlang des Papiers, nach unten). Bei Zoom < 1 sitzt das kleinere
   // Etikett mittig auf dem 48 mm breiten Papier.
@@ -660,27 +515,16 @@ try { liveChannel = new BroadcastChannel("meetup-label"); } catch {}
 // Text für den zweiten Bildschirm (Willkommen + kleinere Zeile) geht mit jedem Etikett an die Live-Ansicht und an das gekoppelte Gerät
 const welcomeText = () => ({ title: $("welcomeTitle").value.trim(), sub: $("welcomeSub").value.trim() });
 function publishLabel() {
+  scheduleRoom();   // zweiter Bildschirm auf einem anderen Gerät (verschlüsselter Relay), falls geteilt
   if (!liveChannel) return;
   const image = canvas.toDataURL("image/png");
   const welcome = welcomeText();
   liveChannel.postMessage({ type: "label", image, welcome });
   try { localStorage.setItem("meetupapp.live", image); localStorage.setItem("meetupapp.welcome", JSON.stringify(welcome)); } catch {}
-  sendMirror();
 }
 
-// Spiegelmodus (WebRTC): das aktuelle Etikett an das gekoppelte zweite Gerät schicken (gebündelt, damit beim Tippen nicht jede Taste ein Bild sendet)
-let mirror = null;
-let mirrorTimer = null;
-function sendMirror(now = false) {
-  if (!mirror?.open) return;
-  clearTimeout(mirrorTimer);
-  mirrorTimer = setTimeout(() => {
-    if (mirror?.open && mirror.channel.bufferedAmount < 2e6) mirror.send({ type: "label", image: canvas.toDataURL("image/png"), welcome: welcomeText() });
-  }, now ? 0 : 120);
-}
-// Kopplungslink an die Live-Ansicht (zweites Fenster) melden: dort sieht der Teilnehmer den QR-Code und scannt ihn mit dem eigenen Handy
-let pairLink = "";
-function announcePair() { liveChannel?.postMessage(pairLink ? { type: "pair", link: pairLink } : { type: "pair-clear" }); }
+// Raum-Link an die Live-Ansicht (zweites Fenster) melden: dort sieht der Teilnehmer den QR-Code und scannt ihn mit dem eigenen Handy
+function announcePair() { liveChannel?.postMessage(room ? { type: "pair", link: roomLink() } : { type: "pair-clear" }); }
 liveChannel && (liveChannel.onmessage = event => { if (event.data?.type === "hello") { publishLabel(); announcePair(); } });
 
 // Winzige Zacken am linken und rechten Rand wie bei einem abgerissenen Etikett (clip-path in angezeigten Pixeln)
@@ -804,7 +648,7 @@ $("form").addEventListener("submit", async event => {
     setFirstOnly(true);   // nächstes Etikett wieder nur mit Vornamen
     render();
     status(t("printed", result.sent.toFixed(1), result.total.toFixed(1), result.rows));
-    if (mirror && $("mirrorEach").checked) { $("mirrorBox").hidden = false; startPairing(); }   // nächster Gast scannt einen frischen Code, der alte verfällt (nur, wenn der Spiegelmodus in dieser Sitzung genutzt wird)
+    if (room && $("roomEach").checked) startRoom({ blank: true });   // nächster Gast scannt einen frischen Code; wer den alten gescannt hat, behält sein Etikett
     if ($("rerollAfterPrint").checked && $("greeting").value.trim()) rollGreeting(rollCount);   // nur wenn die Zwischenzeile benutzt wird
   } catch (error) {
     if (error.name === "NotFoundError") status(t("noPrinter"), true);
@@ -1048,7 +892,7 @@ $("removeList").addEventListener("click", () => {
 });
 $("reset").addEventListener("click", () => { people.forEach(p => { p.done = false; }); save(); renderList(); });
 
-for (const id of ["title", "greeting", "name", "tags", "welcomeTitle", "welcomeSub"]) $(id).addEventListener("input", render);
+for (const id of ["title", "greeting", "name", "tags", "welcomeTitle", "welcomeSub"]) $(id).addEventListener("input", () => { roomHold = false; render(); });
 $("firstOnly").addEventListener("click", () => { setFirstOnly(!firstOnly()); render(); });
 $("flip").addEventListener("change", render);
 // Zufällige positive Zwischenzeilen: Adjektiv (gegendert) in zwei Formen, z. B. "Großartige(r)" oder "Der/Die Phantastische".
@@ -1184,7 +1028,9 @@ $("dice").addEventListener("click", () => rollGreeting(1));
 $("dice2").addEventListener("click", () => rollGreeting(2));
 $("dice3").addEventListener("click", () => rollGreeting(3));
 
+$("welcomeClear").addEventListener("click", () => { $("welcomeTitle").value = ""; $("welcomeSub").value = ""; render(); $("welcomeTitle").focus(); });
 $("clear").addEventListener("click", () => {
+  roomHold = false;   // nach "Clear" ist das Etikett leer: ein wartender Raum darf wieder senden
   setFirstOnly(true);
   pushHistory();   // die Zwischenzeile lässt sich mit ↩️ zurückholen
   $("greeting").value = "";
@@ -1206,11 +1052,16 @@ function setTitleLock(on) {
 const titleLocked = () => $("titleLock").getAttribute("aria-pressed") === "true";
 $("titleLock").addEventListener("click", () => { setTitleLock(!titleLocked()); saveFields(); });
 
+// Vorgabetexte für den zweiten Bildschirm; wer sie nicht ändert, sieht sie beim Sprachwechsel in der anderen Sprache
+const WELCOME_DEFAULTS = { de: ["Willkommen bei uns!", "Hier gibt es dein Namensschild!"], en: ["Welcome!", "Get your name tag here!"] };
+function setWelcomeDefaults(language) { [$("welcomeTitle").value, $("welcomeSub").value] = WELCOME_DEFAULTS[language]; }
+
 // Gespeicherte Eingaben wiederherstellen (vor dem ersten Zeichnen).
 function restoreFields() {
   let state;
   try { state = JSON.parse(localStorage.getItem(FIELDS_KEY)) || {}; } catch { state = {}; }
   for (const id of TEXT_FIELDS) if (typeof state[id] === "string") $(id).value = state[id];
+  if (typeof state.welcomeTitle !== "string" && typeof state.welcomeSub !== "string") setWelcomeDefaults(lang);   // erster Start: Vorgabetexte
   for (const id of CHECK_FIELDS) if (typeof state[id] === "boolean") $(id).checked = state[id];
   if (state.gender === "m" || state.gender === "f") {
     gender = state.gender;
@@ -1288,60 +1139,79 @@ $("accentText").addEventListener("input", () => {   // während des Tippens übe
 $("accentText").addEventListener("change", syncAccentInput);   // beim Verlassen: ungültige Eingabe verwerfen, gültige als Hex zeigen
 $("accentReset").addEventListener("click", () => { applyAccent(null); try { localStorage.removeItem(ACCENT_KEY); } catch {} });
 
-// ---------- Spiegelmodus: Kopplung ----------
-let mirrorState = { key: "mirrorPreparing" };
-function setMirrorState(key, arg) { mirrorState = { key, arg }; updateMirrorUi(); }
-function updateMirrorUi() {
-  const on = Boolean(mirror?.open);
-  $("mirrorBtn").setAttribute("aria-pressed", String(on));
-  $("mirrorBtn").title = $("mirrorBtn").ariaLabel = on ? t("mirrorOn") : t("mirror");
-  $("mirrorState").textContent = t(mirrorState.key, mirrorState.arg);
-  $("mirrorState").hidden = mirrorState.key === "mirrorWaiting";   // beim Warten erklären die zwei Schritte darüber schon alles
-  $("mirrorSteps").hidden = mirrorState.key === "mirrorConnected";   // verbunden: Kopplung ausblenden
-}
-const answerFrom = text => (text.match(/(?:^|[#?&=\s])([zr]\.[A-Za-z0-9_-]{20,})/) || [])[1];
+// ---------- Zweiter Bildschirm auf einem anderen Gerät: Raum über den verschlüsselten Relay ----------
+// Der Editor legt jede Änderung (nur Text und Einstellungen) verschlüsselt im Raum ab, jedes Gerät mit dem Link zeichnet das Etikett selbst.
+let room = null;            // { topic, key, token } oder null (wird nicht geteilt)
+let roomTimer = null, roomLastSent = 0, roomDirty = false, roomHold = false;
 
-const PAIR_TTL_MS = 5 * 60 * 1000;   // ein Code gilt 5 Minuten; danach wird das Angebot geschlossen, eine späte Antwort bringt nichts mehr
-let pairTimer = null;
-async function startPairing() {
-  clearTimeout(pairTimer);
-  mirror?.close(); mirror = null;   // der bisherige Code (und eine bestehende Verbindung) wird ungültig
-  pairLink = ""; announcePair();
-  $("mirrorAnswer").value = ""; $("mirrorQr").innerHTML = ""; $("mirrorLink").value = "";
-  setMirrorState("mirrorPreparing");
-  try {
-    mirror = await Mirror.host({
-      onOpen: () => { clearTimeout(pairTimer); pairLink = ""; announcePair(); setMirrorState("mirrorConnected"); sendMirror(true); },   // einmal benutzt: der Code ist verbraucht
-      onClose: () => { if (mirrorState.key !== "mirrorPreparing") setMirrorState("mirrorClosed"); },
-    });
-  } catch (error) { setMirrorState("mirrorError", error.message); return; }
-  const link = new URL("view.html", location.href);
-  link.hash = "o=" + mirror.code;
-  $("mirrorLink").value = link.href;
-  try { $("mirrorQr").innerHTML = Mirror.qrSvg(link.href); } catch { /* Link zu lang für einen QR-Code: der Link bleibt kopierbar */ }
-  setMirrorState("mirrorWaiting");
-  pairLink = link.href; announcePair();
-  const mine = mirror;
-  pairTimer = setTimeout(() => {   // Verfall, solange noch niemand verbunden ist
-    if (mirror === mine && !mine.open) { mine.close(); mirror = null; pairLink = ""; announcePair(); $("mirrorQr").innerHTML = ""; $("mirrorLink").value = ""; setMirrorState("mirrorExpired"); }
-  }, PAIR_TTL_MS);
+const roomLink = () => { const url = new URL("view.html", location.href); url.hash = "r=" + room.token; return url.href; };
+
+let roomError = null, roomLastJson = "";
+const todayKey = () => new Date().toISOString().slice(0, 10);
+function roomSentToday() { try { const c = JSON.parse(localStorage.getItem("meetupapp.relayCount") || "{}"); return c.day === todayKey() ? c.n : 0; } catch { return 0; } }
+function countRoomMessage() { try { localStorage.setItem("meetupapp.relayCount", JSON.stringify({ day: todayKey(), n: roomSentToday() + 1 })); } catch {} }
+
+async function sendRoom(payload = { model: labelModel(), welcome: welcomeText() }) {
+  if (!room) return;
+  roomDirty = false;
+  const json = JSON.stringify(payload);
+  if (json === roomLastJson) return;   // nichts Neues: keine Nachricht verschwenden (das Tageslimit ist knapp)
+  roomLastSent = Date.now();
+  try { await Relay.publish(room, payload); roomLastJson = json; roomError = null; countRoomMessage(); }
+  catch (error) { roomError = error.status === 429 ? "limit" : "offline"; }
+  updateRoomUi();
+}
+// Änderungen bündeln: höchstens eine Nachricht pro 1,2 s; nach dem Druck wartet ein neuer Raum, bis jemand tippt (roomHold)
+function scheduleRoom(now = false) {
+  if (!room || roomHold) return;
+  roomDirty = true;
+  if (roomTimer) return;
+  const wait = now ? 0 : Math.max(250, 1200 - (Date.now() - roomLastSent));
+  roomTimer = setTimeout(() => { roomTimer = null; if (roomDirty) sendRoom(); }, wait);
 }
 
-$("mirrorBtn").addEventListener("click", () => {
-  $("mirrorBox").hidden = false;
-  if (!mirror) startPairing(); else updateMirrorUi();
+// Neuer Raum. Nach dem Druck (blank) beginnt er leer, ohne Namen und Hashtags des vorigen Gastes, und wird erst beim nächsten Tippen aktuell.
+function startRoom({ blank = false } = {}) {
+  clearTimeout(roomTimer); roomTimer = null;
+  room = Relay.createRoom();
+  roomError = null; roomLastJson = "";
+  if (blank) {
+    roomHold = true;
+    sendRoom({ model: { ...labelModel(), name: "", greeting: "", tags: "" }, welcome: welcomeText() });
+  } else { roomHold = false; scheduleRoom(true); }
+  announcePair(); updateRoomUi();
+}
+function stopRoom() {
+  clearTimeout(roomTimer); roomTimer = null; room = null; roomHold = false; roomError = null; roomLastJson = "";
+  announcePair(); updateRoomUi();
+}
+function updateRoomUi() {
+  const on = Boolean(room);
+  $("roomBtn").setAttribute("aria-pressed", String(on));
+  $("roomBtn").title = $("roomBtn").ariaLabel = on ? t("roomBtnOn") : t("roomBtn");
+  $("roomOff").hidden = on; $("roomOn").hidden = !on;
+  $("roomState").textContent = !on ? "" : roomError === "limit" ? t("roomLimit") : roomError === "offline" ? t("roomOffline") : t("roomLive") + " " + t("roomCount", roomSentToday());
+  $("roomState").classList.toggle("bad", on && roomError !== null);
+  if (!on) { $("roomLink").value = ""; $("roomQr").innerHTML = ""; return; }
+  const link = roomLink();
+  if ($("roomLink").value !== link) {
+    $("roomLink").value = link;
+    try { $("roomQr").innerHTML = Relay.qrSvg(link); } catch { $("roomQr").innerHTML = ""; }
+  }
+}
+
+$("roomBtn").addEventListener("click", () => { $("roomBox").hidden = false; updateRoomUi(); });   // ohne Start wird nichts gesendet
+$("roomStart").addEventListener("click", () => startRoom());
+$("roomCancel").addEventListener("click", () => { $("roomBox").hidden = true; });
+$("roomClose").addEventListener("click", () => { $("roomBox").hidden = true; });
+$("roomNew").addEventListener("click", () => startRoom());
+$("roomStop").addEventListener("click", () => { stopRoom(); $("roomBox").hidden = true; });
+$("roomCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("roomLink").value); } catch { $("roomLink").select(); document.execCommand?.("copy"); }
+  $("roomCopy").textContent = t("copied"); setTimeout(() => { $("roomCopy").textContent = t("copy"); }, 1500);
 });
-$("mirrorEach").checked = (() => { try { return localStorage.getItem("meetupapp.mirrorEach") !== "0"; } catch { return true; } })();   // Standard: an
-$("mirrorEach").addEventListener("change", () => { try { localStorage.setItem("meetupapp.mirrorEach", $("mirrorEach").checked ? "1" : "0"); } catch {} });
-$("mirrorClose").addEventListener("click", () => { $("mirrorBox").hidden = true; });
-$("mirrorReset").addEventListener("click", startPairing);
-$("mirrorConnect").addEventListener("click", async () => {
-  const code = answerFrom($("mirrorAnswer").value);
-  if (!code || !mirror) { setMirrorState("mirrorError", t("mirrorBadCode")); return; }
-  setMirrorState("mirrorConnecting");
-  try { await mirror.accept(code); } catch { setMirrorState("mirrorError", t("mirrorBadCode")); return; }
-  setTimeout(() => { if (mirror && !mirror.open && mirrorState.key === "mirrorConnecting") setMirrorState("mirrorError", t("mirrorTimeout")); }, 20000);
-});
+$("roomEach").checked = (() => { try { return localStorage.getItem("meetupapp.roomEach") !== "0"; } catch { return true; } })();
+$("roomEach").addEventListener("change", () => { try { localStorage.setItem("meetupapp.roomEach", $("roomEach").checked ? "1" : "0"); } catch {} });
 
 // QR-Code zur Seite https://feststelltaste.github.io/nametagapp/ (vorab erzeugt, ECC M); erscheint beim Klick auf den Titel, Klick oder Esc schließt ihn
 const PAGE_QR = ["111111100101110001111011001111111", "100000100000011101000010001000001", "101110101101110001101001101011101", "101110101110001110001110101011101", "101110101100110100100100101011101", "100000101000111110001110001000001", "111111101010101010101010101111111", "000000001000000100000101000000000", "101111100010011101101011001111100", "010110001101100010111101001101101", "011111101011000110101100100010110", "111110000110001110010110010011111", "101000101010100100100100110111011", "010011001110001111001111101001011", "100101110100111001010110111100010", "101100010100101010111110111001100", "000100101100100011011010010110001", "101101000001010011111001001101101", "110000101110101101001010010110100", "110111010110000101100001111111111", "000110110111010010001110010011011", "101001001000001100100001001000101", "100111111110111111001110110001110", "101010011001011100000100101001100", "100000110111000101000010111110011", "000000001100011010111101100010101", "111111100010000100100101101010110", "100000101100101110001111100011110", "101110101110110100100100111111001", "101110101111110111001011110011001", "101110101111111000110111101101100", "100000100110100010011101000011100", "111111101000011011011011110100010"];
@@ -1356,9 +1226,12 @@ function drawRepoQr() {
 }
 $("logo").addEventListener("click", () => { drawRepoQr(); $("qrbox").hidden = false; });
 $("qrbox").addEventListener("click", () => { $("qrbox").hidden = true; });
-addEventListener("keydown", e => { if (e.key === "Escape") { $("qrbox").hidden = true; $("mirrorBox").hidden = true; } });
+addEventListener("keydown", e => { if (e.key === "Escape") { $("qrbox").hidden = true; $("roomBox").hidden = true; } });
 $("lang").addEventListener("click", () => {
+  const was = lang;
   lang = lang === "de" ? "en" : "de";
+  const untouched = WELCOME_DEFAULTS[was][0] === $("welcomeTitle").value && WELCOME_DEFAULTS[was][1] === $("welcomeSub").value;
+  if (untouched) setWelcomeDefaults(lang);   // nur wenn beide Texte noch die Vorgabe der bisherigen Sprache sind
   try { localStorage.setItem(LANG_KEY, lang); } catch {}
   applyI18n();
   render();

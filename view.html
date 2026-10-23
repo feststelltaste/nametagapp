@@ -15,16 +15,6 @@
   #shadow { position:relative; flex:none; }
   /* Trägerpapier: schmale hellbeige Streifen nur über und unter dem Etikett; links und rechts (in den Zacken) ist kein Rand zu sehen */
   #shadow::before { content:""; position:absolute; left:2.5px; right:2.5px; top:-9px; bottom:-9px; background:#f0e6d0; border-block:1px solid #e2d5b8; }
-  #pair { position:fixed; inset:0; z-index:5; display:flex; align-items:center; justify-content:center; padding:16px; background:var(--bg); }
-  #pair[hidden] { display:none; }
-  #pair .card { width:min(480px, 100%); background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; box-shadow:0 4px 24px rgba(0,0,0,.08); }
-  #pair h2 { margin:0 0 6px; font-size:1.15rem; }
-  #pair p { margin:8px 0; }
-  #pair .small { font-size:.85rem; color:var(--muted); }
-  #pairCode { width:100%; font:.75rem/1.3 ui-monospace, Consolas, monospace; padding:8px; border:1px solid var(--line); border-radius:8px; background:#fafaf9; color:var(--fg); resize:none; }
-  .pairbtns { display:flex; gap:8px; margin-top:8px; }
-  .pairbtns button { font:inherit; padding:10px 16px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:#fff; }
-  .pairbtns button + button { background:transparent; color:var(--fg); border-color:var(--line); }
   #welcome { position:fixed; top:0; left:0; right:0; z-index:2; padding:16px 16px 4px; text-align:center; pointer-events:none; }
   #welcome[hidden] { display:none; }
   #welcomeTitle { font-size:clamp(1.6rem, 4.2vw, 3.2rem); font-weight:800; line-height:1.15; }
@@ -43,18 +33,6 @@
 </style>
 </head>
 <body>
-<div id="pair" hidden>
-  <div class="card">
-    <h2 id="pairTitle"></h2>
-    <p id="pairText"></p>
-    <textarea id="pairCode" readonly rows="4" spellcheck="false" hidden></textarea>
-    <div class="pairbtns" id="pairBtns" hidden>
-      <button type="button" id="pairCopy"></button>
-      <button type="button" id="pairShare" hidden></button>
-    </div>
-    <p id="pairHint" class="small"></p>
-  </div>
-</div>
 <div id="lostNote"></div>
 <aside id="scan" hidden>
   <div id="scanQr" aria-hidden="true"></div>
@@ -75,7 +53,8 @@
 </div>
 
 <script src="vendor/qrcode.js"></script>
-<script src="mirror.js"></script>
+<script src="label.js"></script>
+<script src="relay.js"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -136,15 +115,16 @@ function showScan(link) {
   $("scan").dataset.link = link || "";
   $("scanQr").innerHTML = "";
   if (!link) return;
-  try { $("scanQr").innerHTML = Mirror.qrSvg(link); } catch { $("scan").hidden = true; }
+  try { $("scanQr").innerHTML = Relay.qrSvg(link); } catch { $("scan").hidden = true; }
   $("scanText").textContent = L("scan");
 }
 
 // Der Editor (index.html) schickt jedes neue Etikett per BroadcastChannel an dieses Fenster. Beide Seiten
 // müssen vom selben Ursprung kommen (z. B. beide über http://localhost:8000) und im selben Browser laufen.
 const LIVE_KEY = "meetupapp.live";   // letztes Etikett, damit die Ansicht auch ohne offenen Editor etwas zeigt
+const roomMode = /^#r=/.test(location.hash);   // Raum-Link: das Etikett kommt über den Relay, nicht aus diesem Browser
 let channel = null;
-try {
+if (!roomMode) try {
   channel = new BroadcastChannel("meetup-label");
   channel.onmessage = event => {
     const message = event.data;
@@ -154,8 +134,10 @@ try {
   };
   channel.postMessage({ type: "hello" });   // Editor antwortet mit dem aktuellen Etikett
 } catch { $("wait").textContent = "BroadcastChannel wird von diesem Browser nicht unterstützt."; }
-try { const last = localStorage.getItem(LIVE_KEY); if (last) show({ image: last }); } catch {}
-try { showWelcome(JSON.parse(localStorage.getItem("meetupapp.welcome") || "null")); } catch {}
+if (!roomMode) {
+  try { const last = localStorage.getItem(LIVE_KEY); if (last) show({ image: last }); } catch {}
+  try { showWelcome(JSON.parse(localStorage.getItem("meetupapp.welcome") || "null")); } catch {}
+}
 
 addEventListener("resize", fit);
 $("zIn").addEventListener("click", () => setZoom(viewZoom + 0.1));
@@ -168,53 +150,40 @@ addEventListener("keydown", e => {
   else if (e.key === "0") setZoom(1);
 });
 setZoom(viewZoom);
-// ---------- Spiegelmodus: Kopplung per WebRTC ----------
-// Aufruf mit view.html#o=<Code>: Antwort-Code erzeugen, im Editor einfügen lassen, danach kommen die Etiketten live an.
+// ---------- Raum auf einem anderen Gerät (view.html#r=<Raum>): der Editor schickt verschlüsselt jede Änderung, wir zeichnen sie selbst ----------
 const TEXT = {
-  de: { scan: "Scanne den Code, um dein Namensschild auf dem Handy zu sehen", connecting: "Verbindung wird aufgebaut …", answerTitle: "Antwort-Code", answerText: "Kopiere diesen Code und füge ihn im Editor unter Schritt 2 ein.",
-        copy: "Kopieren", copied: "Kopiert", share: "Teilen", hint: "Danach erscheint das Etikett hier automatisch. Diese Seite offen lassen.",
-        connected: "Verbunden", lost: "Verbindung getrennt. Öffne den Link im Editor neu.", bad: "Dieser Link ist ungültig oder abgelaufen. Erzeuge im Editor einen neuen." },
-  en: { scan: "Scan to see your name tag on your phone", connecting: "Connecting …", answerTitle: "Answer code", answerText: "Copy this code and paste it into the editor under step 2.",
-        copy: "Copy", copied: "Copied", share: "Share", hint: "The label then appears here automatically. Keep this page open.",
-        connected: "Connected", lost: "Connection lost. Open the link from the editor again.", bad: "This link is invalid or expired. Create a new one in the editor." },
+  de: { scan: "Scanne den Code, um dein Namensschild auf dem Handy zu sehen", waitingTitle: "Noch kein Namensschild", waiting: "Sobald im Editor ein Etikett erscheint, siehst du es hier live.",
+        reconnecting: "Verbindung unterbrochen, versuche es erneut …", bad: "Dieser Link ist ungültig. Scanne den QR-Code im Editor noch einmal." },
+  en: { scan: "Scan to see your name tag on your phone", waitingTitle: "No name tag yet", waiting: "As soon as a label appears in the editor, you will see it here live.",
+        reconnecting: "Connection lost, trying again …", bad: "This link is not valid. Scan the QR code in the editor again." },
 };
 let uiLang = "en";   // Einstieg ist Englisch; die im Editor gewählte Sprache wird übernommen, wenn sie hier gespeichert ist
 try { const saved = localStorage.getItem("meetupapp.lang"); if (saved === "de" || saved === "en") uiLang = saved; } catch {}
 const L = key => TEXT[uiLang][key];
 
-let guestConnection = null;
-async function pairFromHash() {
-  const match = location.hash.match(/^#o=([zr]\.[A-Za-z0-9_-]+)/);
-  if (!match) return;
-  guestConnection?.close(); guestConnection = null;   // neuer Link im selben Tab: alte Kopplung verwerfen
-  $("pairCode").value = ""; $("pairCode").hidden = $("pairBtns").hidden = true; document.body.classList.remove("lost");
-  $("pair").hidden = false;
-  $("pairTitle").textContent = L("connecting"); $("pairText").textContent = ""; $("pairHint").textContent = "";
-  try {
-    guestConnection = await Mirror.guest(match[1], {
-      onOpen: () => { $("pair").hidden = true; $("wait").style.display = "none"; },
-      onClose: () => {
-        if (tag.naturalWidth) { document.body.classList.add("lost"); $("lostNote").textContent = L("lost"); return; }   // Etikett bleibt stehen, nur ein Hinweis
-        $("pair").hidden = false; $("pairCode").hidden = $("pairBtns").hidden = true; $("pairTitle").textContent = L("lost"); $("pairText").textContent = ""; $("pairHint").textContent = "";
-      },
-      onMessage: message => { if (message?.type === "label") { show({ image: message.image }); showWelcome(message.welcome); } },
-    });
-  } catch { $("pairTitle").textContent = L("bad"); return; }
-  $("pairTitle").textContent = L("answerTitle");
-  $("pairText").textContent = L("answerText");
-  $("pairCode").value = guestConnection.code; $("pairCode").hidden = $("pairBtns").hidden = false;
-  $("pairCopy").textContent = L("copy");
-  $("pairHint").textContent = L("hint");
-  if (navigator.share) { $("pairShare").hidden = false; $("pairShare").textContent = L("share"); }
+// Zeichnet das Etikett aus dem Modell des Editors (label.js, dieselbe Berechnung wie im Editor)
+function applyPayload(payload) {
+  if (!payload?.model) return;
+  const plan = Label.plan(payload.model);
+  show({ image: Label.previewCanvas(plan, payload.model.zoom || 1).toDataURL("image/png") });
+  showWelcome(payload.welcome);
 }
-$("pairCopy").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText($("pairCode").value); } catch { $("pairCode").select(); document.execCommand?.("copy"); }
-  $("pairCopy").textContent = L("copied"); setTimeout(() => { $("pairCopy").textContent = L("copy"); }, 1500);
-});
-$("pairShare").addEventListener("click", () => navigator.share({ text: $("pairCode").value }).catch(() => {}));
-$("pairCode").addEventListener("focus", () => $("pairCode").select());
-pairFromHash();
-addEventListener("hashchange", pairFromHash);   // ein neuer Link im selben Tab ändert nur den Teil nach dem #
+let roomSubscription = null;
+function openRoom() {
+  roomSubscription?.close(); roomSubscription = null;
+  const match = location.hash.match(/^#r=(.+)$/);
+  if (!match) return;
+  const room = Relay.parseRoom(match[1]);
+  const wait = $("wait");
+  if (!room) { wait.textContent = L("bad"); return; }
+  wait.innerHTML = ""; const b = document.createElement("b"); b.textContent = L("waitingTitle"); wait.append(b, L("waiting"));
+  roomSubscription = Relay.subscribe(room, applyPayload, state => {
+    document.body.classList.toggle("lost", state === "getrennt");
+    $("lostNote").textContent = state === "getrennt" ? L("reconnecting") : "";
+  });
+}
+openRoom();
+addEventListener("hashchange", openRoom);   // ein neuer Link im selben Tab ändert nur den Teil nach dem #
 
 // Bildschirm anlassen, solange die Seite offen ist
 let wake = null;
