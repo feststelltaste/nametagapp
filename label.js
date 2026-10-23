@@ -190,7 +190,14 @@ const Label = (() => {
       return layout;
     }
 
-    return { lengthPx, fullPrintedPx, printedPx: lengthPx * zoom, paint };
+    // Senkrechte Lage von Zwischenzeile, Name und Hashtags als Anteil der Etikettbreite (0 = oben, 1 = unten), wie in paint() und previewCanvas()
+    const bodyTop = MARGIN + titleHeight + Math.max(0, (WIDTH - MARGIN - (MARGIN + titleHeight) - bodyHeight) / 2);
+    const greetH = greetLines.length * greetLineH, nameH = fit.lines.length * nameLineH;
+    const tagsTop = bodyTop + greetH + nameH + (fit.lines.length ? 14 : 0), tagsH = rows.length * (chipH + tagRowGap);
+    const frac = y => 0.5 * (1 - zoom) + zoom * y / WIDTH;
+    const regions = { greeting: [frac(bodyTop), frac(bodyTop + greetH)], name: [frac(bodyTop + greetH), frac(bodyTop + greetH + nameH)], tags: [frac(tagsTop), frac(tagsTop + tagsH)], tagFont: zoom * tagSize / WIDTH, tagRow: zoom * (chipH + tagRowGap) / WIDTH };   // tagFont/tagRow: Schriftgröße und Zeilenhöhe der Hashtags als Anteil der Etikettbreite
+
+    return { lengthPx, fullPrintedPx, printedPx: lengthPx * zoom, paint, regions };
   }
 
   /** Vorschau-Canvas (glatt, 3-fach): immer 48 mm breit, mit Zoom < 1 kürzer und die Schrift kleiner, mittig auf der festen Breite. */

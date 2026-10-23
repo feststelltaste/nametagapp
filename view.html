@@ -31,13 +31,22 @@
   #welcome[hidden] { display:none; }
   #welcomeTitle { font-size:clamp(1.6rem, 4.2vw, 3.2rem); font-weight:800; line-height:1.15; }
   #welcomeSub { margin-top:4px; font-size:clamp(1rem, 2.2vw, 1.7rem); color:var(--muted); }
-  #zoombar { position:fixed; left:12px; bottom:12px; z-index:3; display:flex; gap:4px; opacity:.45; transition:opacity .15s; }
-  #zoombar:hover, #zoombar:focus-within { opacity:1; }
-  #zoombar button { font:inherit; min-width:2.4em; padding:6px 8px; color:var(--fg); background:#fff; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
   #scan { position:fixed; right:16px; bottom:16px; z-index:3; width:min(340px, 46vw); padding:12px; text-align:center; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.15); }
   #scan[hidden] { display:none; }
   #scanQr svg { display:block; width:100%; height:auto; }
   #scanText { margin-top:8px; font-size:.95rem; line-height:1.25; color:var(--muted); }
+  @keyframes bubblePop { from { scale:.8; opacity:0; } to { scale:1; opacity:1; } }
+  .bubble { position:fixed; z-index:4; padding:32px 36px; text-align:center; color:#1c1917; font-size:clamp(1.2rem, 2.4vw, 2.1rem); font-weight:700; line-height:1.25; pointer-events:none; animation:bubblePop .25s ease-out; }
+  .bubble svg { position:absolute; left:0; top:0; overflow:visible; animation:bubbleGlow 1.8s ease-in-out infinite; }   /* Ellipse samt Spitze als ein SVG-Pfad; leuchtet in der Hauptfarbe */
+  .bubble path { fill:#fff; stroke:var(--accent); stroke-width:4; stroke-linejoin:round; }
+  .bubble span { position:relative; white-space:pre-line; }   /* \n im Text = Zeilenumbruch */
+  @keyframes bubbleGlow { 0%, 100% { filter:drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent)); } 50% { filter:drop-shadow(0 0 20px color-mix(in srgb, var(--accent) 95%, transparent)); } }
+  @media (prefers-reduced-motion: reduce) { .bubble, .bubble svg { animation:none; } .bubble svg { filter:drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 70%, transparent)); } }
+  .bubble[hidden] { display:none; }
+  #ideas { position:fixed; z-index:3; display:flex; flex-wrap:wrap; gap:0 .5em; justify-content:center; align-content:flex-start; color:#b5afa9; font-family:ui-monospace, Menlo, Consolas, monospace; pointer-events:none; transition:opacity .7s ease; }   /* liegt auf dem Etikett genau dort, wo die echten Hashtags erscheinen */
+  #ideas span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #ideas.above { font-weight:600; font-size:clamp(1.1rem, 2vw, 1.6rem); line-height:1.3; transform:translateY(-100%); }   /* Adjektive: über der Blase */
+  #ideas[hidden] { display:none; }
   #lostNote { display:none; position:fixed; left:0; right:0; bottom:8px; text-align:center; font-size:.8rem; color:var(--muted); z-index:2; }
   body.lost #lostNote { display:block; }
   #wait { text-align:center; color:var(--muted); padding:24px; }
@@ -50,6 +59,7 @@
     <h2 id="consentTitle"></h2>
     <p id="consentIntro"></p>
     <ul id="consentList"></ul>
+    <p id="consentHost" class="small" hidden></p>
     <p class="small"><a id="consentMore" target="_blank" rel="noopener"></a> · <a id="consentNtfy" target="_blank" rel="noopener"></a></p>
     <div class="consentbtns">
       <button type="button" id="consentNo"></button>
@@ -58,6 +68,8 @@
     <p id="consentDone" class="small" hidden></p>
   </div>
 </div>
+<div id="bubble" class="bubble" role="status" hidden></div>
+<div id="ideas" aria-hidden="true" hidden></div>
 <div id="lostNote"></div>
 <aside id="scan" hidden>
   <div id="scanQr" aria-hidden="true"></div>
@@ -67,11 +79,6 @@
   <div id="welcomeTitle"></div>
   <div id="welcomeSub"></div>
 </header>
-<div id="zoombar" role="group" aria-label="Zoom">
-  <button type="button" id="zOut" aria-label="Zoom out" title="Zoom out (−)">−</button>
-  <button type="button" id="zVal" aria-label="Reset zoom" title="Reset zoom (0)">100%</button>
-  <button type="button" id="zIn" aria-label="Zoom in" title="Zoom in (+)">+</button>
-</div>
 <div id="stage">
   <div id="shadow"><img id="tag" alt="Namensschild"></div>
   <div id="wait"><b>No name tag yet</b>Open the editor in the same browser (same address). As soon as a label appears there, you will see it here live.</div>
@@ -86,23 +93,21 @@ const $ = id => document.getElementById(id);
 const tag = $("tag");
 
 
-// Zoom der Ansicht: Faktor auf die passende Größe, mit Tasten + / − / 0 oder den Knöpfen unten links; wird gemerkt
-const ZOOM_KEY = "view.zoom", ZOOM_MIN = 0.2, ZOOM_MAX = 1.5;
-let viewZoom = 1;
-try { const z = Number(localStorage.getItem(ZOOM_KEY)); if (z >= ZOOM_MIN && z <= ZOOM_MAX) viewZoom = z; } catch {}
-function setZoom(z) {
-  viewZoom = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)) * 100) / 100;
-  $("zVal").textContent = Math.round(viewZoom * 100) + "%";
-  try { localStorage.setItem(ZOOM_KEY, String(viewZoom)); } catch {}
-  fit();
-}
-
 function fit() {
   const header = $("welcome").hidden ? 0 : $("welcome").offsetHeight;   // Platz für den Willkommenstext oben
   $("stage").style.paddingTop = (12 + header) + "px";
   if (!tag.naturalWidth) return;
-  const boxW = innerWidth - 24, boxH = innerHeight - 24 - 20 - header;   // 20 px für die Trägerpapier-Streifen oben und unten
-  const scale = Math.min(boxW / tag.naturalWidth, boxH / tag.naturalHeight) * viewZoom;   // das Etikett bleibt immer liegend und wird nur skaliert
+  const bubbleRoom = roomMode || !bubblesOn ? 0 : bubbleWidth() + 30;   // links Platz für die Sprechblase: sie darf das Etikett nie überdecken
+  let boxW = innerWidth - 24, boxH = innerHeight - 24 - 20 - header;   // 20 px für die Trägerpapier-Streifen oben und unten
+  let scale = Math.min(boxW / tag.naturalWidth, boxH / tag.naturalHeight);   // das Etikett bleibt immer liegend und wird nur skaliert
+  const labelW = Math.floor(tag.naturalWidth * scale), free = (innerWidth - labelW) / 2;
+  if (free < bubbleRoom) {   // links ist zu wenig frei (kleiner Bildschirm): Etikett schmaler und nach rechts neben den Blasenplatz
+    boxW = innerWidth - 24 - bubbleRoom;
+    scale = Math.min(boxW / tag.naturalWidth, boxH / tag.naturalHeight);
+  }
+  const shift = free < bubbleRoom ? bubbleRoom : 0;
+  $("stage").style.paddingLeft = 12 + shift + "px";
+  $("welcome").style.paddingLeft = 16 + shift + "px";   // die Überschrift bleibt über dem Etikett zentriert
   tag.style.width = Math.floor(tag.naturalWidth * scale) + "px";
   tag.style.height = Math.floor(tag.naturalHeight * scale) + "px";
   tag.style.clipPath = sawEdges(Math.floor(tag.naturalWidth * scale), Math.floor(tag.naturalHeight * scale));
@@ -130,7 +135,7 @@ function sawEdges(w, h) {
 
 function show(label) {
   if (!label?.image) { tag.style.display = "none"; $("wait").style.display = ""; return; }
-  tag.onload = () => { fit(); tag.style.display = "block"; $("wait").style.display = "none"; };
+  tag.onload = () => { fit(); tag.style.display = "block"; $("wait").style.display = "none"; placeBubble(); };
   tag.src = label.image;
 }
 
@@ -148,12 +153,13 @@ function showScan(link) {
 // müssen vom selben Ursprung kommen (z. B. beide über http://localhost:8000) und im selben Browser laufen.
 const LIVE_KEY = "meetupapp.live";   // letztes Etikett, damit die Ansicht auch ohne offenen Editor etwas zeigt
 const roomMode = /^#r=/.test(location.hash);   // Raum-Link: das Etikett kommt über den Relay, nicht aus diesem Browser
-let channel = null;
+let channel = null, regions = null, regionsExtra = {}, focusField = "", tagName = "", gender = null, bubbleText = "", bubblesOn = true, adjectiveIdeas = null;
 if (!roomMode) try {
   channel = new BroadcastChannel("meetup-label");
   channel.onmessage = event => {
     const message = event.data;
-    if (message?.type === "label") { show({ image: message.image }); showWelcome(message.welcome); }
+    if (message?.type === "label") { show({ image: message.image }); showWelcome(message.welcome); regions = message.regions || null; regionsExtra = message.regions || {}; tagName = message.name || ""; bubblesOn = message.bubbles !== false; fit(); placeBubble(); }
+    else if (message?.type === "focus") { bubblesOn = message.enabled !== false; fit(); focusField = message.field || ""; gender = message.gender || null; bubbleText = message.text || ""; adjectiveIdeas = message.ideas || null; placeBubble(); }
     else if (message?.type === "pair") showScan(message.link);        // Kopplungscode des Editors: der Teilnehmer scannt ihn
     else if (message?.type === "pair-clear") showScan("");
   };
@@ -164,39 +170,101 @@ if (!roomMode) {
   try { showWelcome(JSON.parse(localStorage.getItem("meetupapp.welcome") || "null")); } catch {}
 }
 
-addEventListener("resize", fit);
-$("zIn").addEventListener("click", () => setZoom(viewZoom + 0.1));
-$("zOut").addEventListener("click", () => setZoom(viewZoom - 0.1));
-$("zVal").addEventListener("click", () => setZoom(1));
-addEventListener("keydown", e => {
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key === "+" || e.key === "=") setZoom(viewZoom + 0.1);
-  else if (e.key === "-" || e.key === "_") setZoom(viewZoom - 0.1);
-  else if (e.key === "0") setZoom(1);
-});
-setZoom(viewZoom);
+addEventListener("resize", () => { fit(); placeBubble(); });
+// Sprechblase links neben dem Etikett: sie zeigt auf die Stelle, an der das Feld, in dem der Cursor gerade steht, auf dem Etikett erscheint
+// Hashtag-Inspiration: solange das Hashtag-Feld aktiv ist, blenden ein paar graue Begriffe über der Blase auf und ab
+const IDEAS = ["#softwarearchitektur", "#clean-architecture", "#microservices", "#domain-driven-design", "#event-sourcing", "#cqrs", "#hexagonal", "#docs-as-code", "#arc42", "#adr",
+  "#api-design", "#rest", "#graphql", "#kubernetes", "#devops", "#ci-cd", "#testing", "#tdd", "#refactoring", "#clean-code",
+  "#java", "#kotlin", "#typescript", "#rust", "#python", "#observability", "#security", "#modularität", "#legacy", "#ai-assisted-coding"];
+const HOBBIES = {   // Hobbys zum Warmwerden: die Hashtags beginnen damit und mischen sich dann unter die Technik-Begriffe
+  de: ["#schwimmen", "#reiten", "#lesen", "#joggen", "#wandern", "#kochen", "#fotografie", "#radfahren", "#musik", "#klettern", "#gärtnern"],
+  en: ["#swimming", "#riding", "#reading", "#running", "#hiking", "#cooking", "#photography", "#cycling", "#music", "#climbing", "#gardening"] };
+let ideasTimers = new Set(), ideasKey = "", ideasRunning = false;
+function showIdeas(on, list = IDEAS, first = null) {
+  const box = $("ideas");
+  if (!on) { for (const t of ideasTimers) clearTimeout(t); ideasTimers.clear(); ideasRunning = false; box.hidden = true; return; }
+  const key = list.join("|");
+  if (ideasRunning && key === ideasKey) return;   // läuft schon mit derselben Liste
+  for (const t of ideasTimers) clearTimeout(t);
+  ideasTimers.clear(); ideasKey = key; ideasRunning = true;
+  const later = (fn, ms) => { const t = setTimeout(() => { ideasTimers.delete(t); fn(); }, ms); ideasTimers.add(t); };
+  // Drei Plätze, jeder blendet für sich und zu eigenen Zeiten ein und aus
+  const slots = [0, 1, 2].map(() => Object.assign(document.createElement("span"), { textContent: "" }));
+  box.replaceChildren(...slots); box.hidden = false;
+  const pickNew = () => { const taken = slots.map(el => el.textContent); const free = list.filter(w => !taken.includes(w)); return free[Math.floor(Math.random() * free.length)]; };
+  slots.forEach((el, i) => {
+    el.style.transition = "opacity .7s ease"; el.style.opacity = 0;
+    if (first?.[i]) el.textContent = first[i];   // der erste Durchgang beginnt mit den Hobbys
+    const cycle = () => later(() => { el.style.opacity = 0; later(() => { el.textContent = pickNew(); el.style.opacity = 1; cycle(); }, 800); }, 2200 + Math.random() * 3200);
+    later(() => { if (!el.textContent) el.textContent = pickNew(); el.style.opacity = 1; cycle(); }, 300 + i * 650);
+  });
+}
+const bubbleWidth = () => Math.round(Math.min(400, innerWidth * 0.34));
+function placeBubble() {
+  const bubble = $("bubble"), range = regions?.[focusField];
+  try { const accent = localStorage.getItem("meetupapp.accent"); if (accent) document.documentElement.style.setProperty("--accent", accent); } catch {}   // Hauptfarbe aus den Einstellungen des Editors
+  if (!focusField || !range || !tag.naturalWidth || tag.style.display === "none") { bubble.hidden = true; showIdeas(false); return; }
+  const rect = tag.getBoundingClientRect();
+  const template = bubbleText || L("bubble_" + focusField + (focusField === "greeting" && !tagName ? "_noname" : ""));   // bubbleText: eigener Text aus den Einstellungen des Editors
+  const y = rect.top + rect.height * (range[0] + range[1]) / 2;   // Mitte des Bereichs auf dem Etikett
+  const text = document.createElement("span");
+  text.textContent = template.replace("{name}", tagName || (uiLang === "de" ? "Name" : "name")).replace("{welcher}", gender === "m" ? "Welcher" : gender === "f" ? "Welche" : "Welche(r)");   // {name}: der Name, wie er auf dem Etikett steht
+  bubble.replaceChildren(text);
+  bubble.style.maxWidth = bubbleWidth() + "px";
+  bubble.hidden = false;
+  // Ellipse mit Spitze unten rechts als ein Pfad: die Spitze wächst aus dem Rand heraus und zeigt auf die Stelle am Etikett
+  const w = bubble.offsetWidth, h = bubble.offsetHeight, rx = w / 2 - 2, ry = h / 2 - 2, cx = w / 2, cy = h / 2;
+  const at = deg => [cx + rx * Math.cos(deg * Math.PI / 180), cy + ry * Math.sin(deg * Math.PI / 180)];
+  const [x1, y1] = at(36), [x2, y2] = at(52), [mx, my] = at(44), lift = !bubbleText && focusField === "greeting" && !tagName ? 110 : 0, tip = [mx + 40, my + 40 + lift];   // "Wie bist du so?" sitzt deutlich höher, die Spitze wird länger und zeigt weiter auf die Stelle
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"), path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  svg.setAttribute("width", w); svg.setAttribute("height", h); svg.setAttribute("aria-hidden", "true");
+  path.setAttribute("d", `M${x2} ${y2} A${rx} ${ry} 0 1 1 ${x1} ${y1} L${tip[0]} ${tip[1]} Z`);
+  svg.append(path); bubble.prepend(svg);
+  bubble.style.left = Math.max(8, rect.left - 6 - tip[0]) + "px";   // die Spitze berührt knapp den linken Etikettrand
+  bubble.style.top = Math.max(8, y - tip[1]) + "px";
+  const ideas = $("ideas"), bubbleTop = parseFloat(bubble.style.top), onLabel = focusField === "tags", tagsUsed = onLabel && range[1] - range[0] > 0.005;   // tagsUsed: es stehen schon Hashtags auf dem Etikett
+  const hobbies = HOBBIES[uiLang] || HOBBIES.en;
+  const list = focusField === "tags" ? IDEAS.concat(hobbies) : focusField === "greeting" ? adjectiveIdeas : null;
+  showIdeas(Boolean(list?.length) && !tagsUsed && (onLabel || bubbleTop > 60), list || IDEAS, focusField === "tags" ? hobbies.slice(0, 3) : null);   // Inspiration bei Hashtags und Adjektiven, wenn über der Blase Platz ist
+  ideas.classList.toggle("above", !onLabel);
+  if (onLabel) {   // Hashtags: auf dem Etikett an der Stelle der echten Hashtags, in Größe und Zeilenhöhe der echten
+    const used = false, size = rect.height * (regionsExtra.tagFont || 0.078);
+    ideas.style.left = rect.left + "px"; ideas.style.width = rect.width + "px";
+    ideas.style.top = rect.top + rect.height * (used ? range[1] : range[0]) + "px";
+    ideas.style.fontSize = size + "px"; ideas.style.lineHeight = rect.height * (regionsExtra.tagRow || 0.09) + "px";
+  } else {
+    ideas.style.fontSize = ideas.style.lineHeight = "";
+    ideas.style.left = parseFloat(bubble.style.left) + "px"; ideas.style.width = w + "px"; ideas.style.top = bubbleTop - 10 + "px";
+  }   // ... die Spitze reicht schräg nach unten auf die Stelle; die Blase sitzt dadurch etwas darüber
+}
+fit();
 // ---------- Raum auf einem anderen Gerät (view.html#r=<Raum>): der Editor schickt verschlüsselt jede Änderung, wir zeichnen sie selbst ----------
+const GITHUB_PRIVACY = "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement";
 const README_PRIVACY = "https://github.com/feststelltaste/nametagapp#privacy", NTFY_PRIVACY = "https://docs.ntfy.sh/privacy/";
 const TEXT = {
-  de: { scan: "Scanne den Code, um dein Namensschild auf dem Handy zu sehen. Vorher wirst du gefragt, bevor etwas gesendet wird.", waitingTitle: "Noch kein Namensschild", waiting: "Sobald im Editor ein Etikett erscheint, siehst du es hier live.",
+  de: { scan: "Scanne den Code, um dein Namensschild auf dein Handy zu übertragen. Nach dem Scannen musst du erst zustimmen; ohne deine Zustimmung werden keine Daten übertragen.", waitingTitle: "Noch kein Namensschild", waiting: "Sobald im Editor ein Etikett erscheint, siehst du es hier live.",
+        bubble_name: "Verrate uns deinen Namen", bubble_greeting: "{welcher} {name}\nbist du?", bubble_greeting_noname: "Wie\nbist du so?", bubble_tags: "Was begeistert dich?",
         reconnecting: "Verbindung unterbrochen, versuche es erneut …", bad: "Dieser Link ist ungültig. Scanne den QR-Code im Editor noch einmal.",
-        consentTitle: "Dein Namensschild auf dem Handy zeigen?",
-        consentIntro: "Dafür verbindet sich diese Seite mit dem öffentlichen Dienst ntfy.sh (ein Drittanbieter). Erst wenn du unten auf „Verbinden“ tippst, passiert Folgendes:",
+        consentTitle: "Namensschild auf dein Handy übertragen?",
+        consentIntro: "Du hast den Code gescannt. Wenn du zustimmst, werden die Daten deines Namensschilds (Name, Titel, Hashtags) über den öffentlichen Dienst ntfy.sh (ein Drittanbieter) auf dieses Handy übertragen. Erst wenn du unten zustimmst, passiert Folgendes:",
         consentItems: ["ntfy.sh sieht deine IP-Adresse, deinen Browser-Typ und die Adresse dieser Seite.",
-                       "Die Daten deines Namensschilds (Name, Titel, Hashtags) kommen Ende-zu-Ende verschlüsselt über ntfy.sh. Der Dienst kann sie nicht lesen, speichert sie aber bis zu 12 Stunden.",
+                       "Die Daten deines Namensschilds (Name, Titel, Hashtags) werden vom Editor an dieses Handy übertragen, Ende-zu-Ende verschlüsselt über ntfy.sh. Der Dienst kann sie nicht lesen, speichert sie aber bis zu 12 Stunden.",
                        "Dein Handy sendet nur ein kurzes verschlüsseltes „Hallo“, damit das Namensschild geschickt wird. Keine Cookies, kein Konto.",
-                       "Vorher wird nichts gesendet."],
-        consentYes: "Verbinden und mein Namensschild zeigen", consentNo: "Nein, danke", consentDone: "Es wurde nichts gesendet. Du kannst diese Seite schließen.",
+                       "Ohne deine Zustimmung wird nichts übertragen."],
+        consentYes: "Zustimmen und Namensschild übertragen", consentNo: "Nicht zustimmen", consentDone: "Du hast nicht zugestimmt, es wurden keine Daten übertragen. Du kannst diese Seite schließen.",
+        consentHost: "Schon beim Öffnen dieser Seite hat GitHub Pages (der Hoster dieser Seite) deine IP-Adresse und deinen Browser-Typ gesehen. Das lässt sich vor deiner Zustimmung nicht vermeiden.", consentGithub: "Datenschutzerklärung von GitHub",
         consentMore: "Details zum Datenschutz", consentNtfy: "Datenschutzerklärung von ntfy" },
-  en: { scan: "Scan to see your name tag on your phone. You are asked before anything is sent.", waitingTitle: "No name tag yet", waiting: "As soon as a label appears in the editor, you will see it here live.",
+  en: { scan: "Scan to transfer your name tag to your phone. After scanning you must agree first; without your consent no data is transferred.", waitingTitle: "No name tag yet", waiting: "As soon as a label appears in the editor, you will see it here live.",
+        bubble_name: "Tell us your name", bubble_greeting: "Which {name} are you?", bubble_greeting_noname: "What are you like?", bubble_tags: "What excites you?",
         reconnecting: "Connection lost, trying again …", bad: "This link is not valid. Scan the QR code in the editor again.",
-        consentTitle: "Show your name tag on your phone?",
-        consentIntro: "To do that, this page connects to the public service ntfy.sh (a third party). Only when you tap “Connect” below, this happens:",
+        consentTitle: "Transfer your name tag to your phone?",
+        consentIntro: "You have scanned the code. If you agree, the data of your name tag (name, title, hashtags) is transferred to this phone through the public service ntfy.sh (a third party). Only when you agree below, this happens:",
         consentItems: ["ntfy.sh sees your IP address, your browser type and the address of this page.",
-                       "The data of your name tag (name, title, hashtags) comes end-to-end encrypted through ntfy.sh. The service cannot read it, but keeps it for up to 12 hours.",
+                       "The data of your name tag (name, title, hashtags) is transferred from the editor to this phone, end-to-end encrypted through ntfy.sh. The service cannot read it, but keeps it for up to 12 hours.",
                        "Your phone only sends a short encrypted “hello” so that the name tag is sent. No cookies, no account.",
-                       "Nothing is sent before that."],
-        consentYes: "Connect and show my name tag", consentNo: "No, thanks", consentDone: "Nothing was sent. You can close this page.",
+                       "Without your consent nothing is transferred."],
+        consentYes: "Agree and transfer my name tag", consentNo: "Do not agree", consentDone: "You did not agree, so no data was transferred. You can close this page.",
+        consentHost: "When this page was opened, GitHub Pages (the host of this page) already saw your IP address and browser type. That cannot be avoided before you agree.", consentGithub: "GitHub privacy statement",
         consentMore: "Privacy details", consentNtfy: "ntfy privacy policy" },
 };
 let uiLang = (navigator.language || "en").toLowerCase().startsWith("de") ? "de" : "en";   // Gäste lesen die Zustimmung in der Sprache ihres Handys; eine im Editor gewählte Sprache hat Vorrang
@@ -227,6 +295,8 @@ function askConsent(room) {
   $("consentYes").textContent = L("consentYes"); $("consentNo").textContent = L("consentNo");
   $("consentMore").textContent = L("consentMore"); $("consentMore").href = README_PRIVACY;
   $("consentNtfy").textContent = L("consentNtfy"); $("consentNtfy").href = NTFY_PRIVACY;
+  const host = $("consentHost"); host.hidden = !/\.github\.io$/i.test(location.hostname);   // nur wenn die Seite wirklich bei GitHub Pages liegt
+  if (!host.hidden) { const link = Object.assign(document.createElement("a"), { textContent: L("consentGithub"), href: GITHUB_PRIVACY, target: "_blank", rel: "noopener" }); host.replaceChildren(L("consentHost") + " ", link); }
   $("consentDone").hidden = true; $("consent").hidden = false;
   $("consentYes").onclick = () => { try { sessionStorage.setItem("consent:" + room.topic, "1"); } catch {} $("consent").hidden = true; connectRoom(room); };
   $("consentNo").onclick = () => { $("consentDone").textContent = L("consentDone"); $("consentDone").hidden = false; $("consentYes").hidden = $("consentNo").hidden = true; };

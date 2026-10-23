@@ -60,6 +60,15 @@
   .roomeach { display:flex; gap:8px; align-items:center; font-weight:400; font-size:.9rem; margin-top:12px; }
   .roombtns { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
   .roombtns #roomStop { margin-right:auto; color:var(--muted); }
+  #nameSuggest { position:fixed; z-index:20; margin:0; padding:4px; list-style:none; max-height:min(46vh, 22rem); overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.25); }
+  #nameSuggest { touch-action:pan-y; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+  #nameSuggest li { display:flex; gap:8px; align-items:center; min-height:44px; padding:8px 12px; border-radius:7px; cursor:pointer; font-size:1rem; }
+  #nameSuggest li[aria-selected=true], #nameSuggest li:hover { background:var(--accent-soft); }
+  #nameSuggest li.done { color:var(--muted); }
+  #nameSuggest li .real { margin-left:auto; font-size:.85rem; color:var(--muted); }
+  #nameSuggest li b { font-weight:700; text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:3px; }
+  #nameSuggest .more { padding:6px 12px; font-size:.8rem; color:var(--muted); cursor:default; }
+  .roomquota { flex:1; align-self:center; text-align:center; font-size:.75rem; line-height:1.2; color:var(--muted); }
   @media (max-width: 700px) { .room-grid { grid-template-columns:1fr; } }
   .welcome-row { display:flex; gap:8px; align-items:stretch; }
   .welcome-fields { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
@@ -167,7 +176,7 @@
     <label for="title" data-i18n="titleLabel">Title text</label>
     <div class="title-row">
       <input id="title" value="" data-i18n-ph="titlePh" placeholder="Your event title">
-      <button type="button" id="titleLock" class="chip lock" aria-pressed="false" data-i18n-title="lockTitle" data-i18n-aria="lockTitle" title="Lock the title: “Clear” then keeps it" aria-label="Lock the title: “Clear” then keeps it">🔓</button>
+      <button type="button" id="titleLock" class="chip lock" aria-pressed="false" data-i18n-title="lockTitle" data-i18n-aria="lockTitle" title="Lock the title: “Reset” then keeps it" aria-label="Lock the title: “Reset” then keeps it">🔓</button>
     </div>
 
     <label for="greeting" data-i18n="greetingLabel">Intro line (optional)</label>
@@ -184,7 +193,7 @@
 
     <label for="name" data-i18n="nameLabel">Name (large) – search also works by last name</label>
     <div class="name-row">
-      <input id="name" list="people" value="" data-i18n-ph="namePh" placeholder="Type a name or pick from the list">
+      <input id="name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="nameSuggest" value="" data-i18n-ph="namePh" placeholder="Type a name or pick from the list">
       <button type="button" id="checkOff" class="chip check" aria-pressed="false" data-i18n-title="checkOffTitle" data-i18n-aria="checkOffTitle" title="Check off this person in the attendee list (without printing)" aria-label="Check off this person in the attendee list (without printing)">☐</button>
       <button type="button" id="firstOnly" class="chip two" aria-pressed="true" data-i18n-title="firstOnlyTitle" title="Print only the first word of the name (on/off)" data-i18n-html="firstOnly">First<br>name only</button>
     </div>
@@ -195,7 +204,7 @@
 
     <label for="tags">Hashtags</label>
     <textarea id="tags" data-i18n-ph="tagsPh" placeholder="#java #architecture #docs-as-code"></textarea>
-    <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n="clear" title="Clears name, intro line and hashtags">Clear</button>
+    <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n="clear" title="Resets name, intro line and hashtags">Reset</button>
   </form>
 
   <section class="people">
@@ -276,6 +285,13 @@
       </div>
       <button type="button" id="welcomeClear" class="chip" data-i18n-title="welcomeClearTitle" data-i18n-aria="welcomeClearTitle" title="Clear the second screen text" aria-label="Clear the second screen text">🗑</button>
     </div>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:12px"><input type="checkbox" id="bubbles" checked style="width:auto"> <span data-i18n="bubbles">Speech bubbles in the live view</span></label>
+    <div id="bubbleTexts">
+      <input id="bubbleName" type="text" data-i18n-ph="bubbleNamePh" placeholder="Tell us your name" aria-label="Speech bubble for the name">
+      <input id="bubbleGreeting" type="text" data-i18n-ph="bubbleGreetingPh" placeholder="{welcher} {name} are you?" aria-label="Speech bubble for the intro line" style="margin-top:6px">
+      <input id="bubbleTags" type="text" data-i18n-ph="bubbleTagsPh" placeholder="What excites you?" aria-label="Speech bubble for the hashtags" style="margin-top:6px">
+      <p class="roomnote" data-i18n="bubbleHint">Leave empty for the default. {name} = name on the label, {welcher} = Welcher/Welche (by gender).</p>
+    </div>
   </section>
   </div>
 
@@ -288,7 +304,6 @@
         <p data-i18n="roomIntro">With this, a phone or tablet can show the label live: it scans a QR code and follows every change.</p>
         <p class="roomwarn roomNotice" data-i18n-html="roomDisclosure">…</p>
         <label class="roomhide roomNotice"><input type="checkbox" id="roomHide" style="width:auto"> <span data-i18n="roomHide">Do not show this notice again</span></label>
-        <p class="roomnote roomLinkOnly" id="roomLinkNote"><a href="https://github.com/feststelltaste/nametagapp#privacy" target="_blank" rel="noopener" data-i18n="roomPrivacyLink">Privacy notes (README)</a></p>
         <div class="roombtns">
           <button type="button" id="roomCancel" data-i18n="cancel">Cancel</button>
           <button type="button" id="roomStart" class="roomgo" data-i18n="roomStart">Start sharing</button>
@@ -299,15 +314,15 @@
           <div id="roomQr" aria-label="QR code"></div>
           <div class="room-side">
             <p data-i18n="roomExplain">Scan the QR code with a phone or tablet. The label then follows live.</p>
-            <div class="linkrow"><input id="roomLink" readonly aria-label="Link"><button type="button" id="roomCopy" data-i18n="copy">Copy</button></div>
+            <div class="linkrow"><input id="roomLink" readonly aria-label="Link"></div>
             <div id="roomState" class="roomstate"></div>
-            <p class="roomnote roomLinkOnly" style="margin-top:10px"><a href="https://github.com/feststelltaste/nametagapp#privacy" target="_blank" rel="noopener" data-i18n="roomPrivacyLink">Privacy notes (README)</a></p>
-        <p class="roomnote" data-i18n="roomEach">After each print a new QR code is created; each guest only keeps their own name tag.</p>
+        <p class="roomnote" data-i18n-html="roomEach">After each print a new QR code is created; each guest only keeps their own name tag.</p>
           </div>
         </div>
         <p class="roomwarn roomNotice" data-i18n-html="roomDisclosure" style="margin-top:14px">…</p>
         <div class="roombtns">
           <button type="button" id="roomStop" data-i18n="roomStop">Stop sharing</button>
+          <span id="roomQuota" class="roomquota"></span>
           <button type="button" id="roomNew" data-i18n="roomNew">New code</button>
           <button type="button" id="roomClose" data-i18n="close">Close</button>
         </div>
@@ -315,6 +330,7 @@
     </div>
   </div>
   <div id="qrbox" hidden><div class="card"><canvas id="qrcanvas" aria-label="QR-Code"></canvas><div class="url">feststelltaste.github.io/nametagapp</div></div></div>
+  <ul id="nameSuggest" role="listbox" hidden></ul>
   <datalist id="people"></datalist>
   <datalist id="realNames"></datalist>
 </main>
@@ -336,7 +352,7 @@ const $ = id => document.getElementById(id);
 const T = {
   de: {
     langTitle: "Sprache / Language", themeTitle: "Hell / Dunkel umschalten", themeAria: "Darstellung umschalten",
-    titleLabel: "Titeltext", lockTitle: "Titel schützen: „Leeren“ lässt ihn dann stehen", titlePh: "Titel deiner Veranstaltung", greetingLabel: "Zwischenzeile (optional)", greetingPh: "z. B. Hallo, ich bin",
+    titleLabel: "Titeltext", lockTitle: "Titel schützen: „Zurücksetzen“ lässt ihn dann stehen", titlePh: "Titel deiner Veranstaltung", greetingLabel: "Zwischenzeile (optional)", greetingPh: "z. B. Hallo, ich bin",
     maleTitle: "Männliche Form (Großartiger)", maleAria: "Mann", femaleTitle: "Weibliche Form (Großartige)", femaleAria: "Frau",
     dice1Title: "Zufälliges positives Adjektiv", dice2Title: "Zwei zufällige positive Adjektive", dice3Title: "Drei zufällige positive Adjektive",
     backTitle: "Vorherige Zwischenzeile zurückholen", clearGreetingTitle: "Zwischenzeile leeren",
@@ -356,19 +372,20 @@ const T = {
     csvHeader: "Name;Echter Name;Gedruckt", nickMode: "Nicknames mit echten Namen überschreiben", realLabel: "Echter Name (suchen oder ergänzen)", realPh: "Echter Name, für Bewirtungsbelege", yes: "Ja", no: "Nein", csvFile: "teilnehmer",
     print: "Drucken", lengthLabel: "Etikettenlänge (mm, Papier läuft quer)", autoLength: "Länge automatisch aus dem Inhalt berechnen",
     flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
+    bubbles: "Sprechblasen in der Live-Ansicht", bubbleNamePh: "Verrate uns deinen Namen", bubbleGreetingPh: "{welcher} {name} bist du?", bubbleTagsPh: "Was begeistert dich?", bubbleHint: "Leer lassen für den Standardtext. {name} = Name vom Etikett, {welcher} = Welcher/Welche (nach Geschlecht).",
     openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
     openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", welcomeLabel: "Text für den zweiten Bildschirm (optional)", welcomeTitlePh: "Willkommen bei uns!", welcomeSubPh: "Hier gibt es dein Namensschild!", welcomeClearTitle: "Text für den zweiten Bildschirm leeren",
-    close: "Schließen", copy: "Kopieren", copied: "Kopiert",
+    close: "Schließen",
     roomBtn: "Zweiter Bildschirm auf einem anderen Gerät (QR-Code)", roomBtnOn: "Zweiter Bildschirm läuft (QR-Code)",
     roomHeading: "Zweiten Bildschirm auf einem anderen Gerät öffnen",
     roomExplain: "Scanne den QR-Code mit einem Handy oder Tablet. Das Etikett läuft dann live mit.",
-    roomEach: "Nach jedem Druck entsteht ein neuer QR-Code; jeder Gast behält nur sein eigenes Namensschild.",
-    roomHide: "Diesen Hinweis nicht mehr anzeigen", roomPrivacyLink: "Hinweise zum Datenschutz (README)", roomNew: "Neuer Code", roomStop: "Teilen beenden", cancel: "Abbrechen", roomStart: "Teilen starten",
+    roomEach: "<b>Datenschutzhinweis:</b> Auf dem Handy des Gasts kommt vor der Übertragung noch ein Aufklärungshinweis. Nach jedem Druck entsteht ein neuer QR-Code; jeder Gast behält nur sein eigenes Namensschild.",
+    roomHide: "Diesen Hinweis nicht mehr anzeigen", roomNew: "Neuer Code", roomStop: "Teilen beenden", cancel: "Abbrechen", roomStart: "Teilen starten",
     roomIntro: "Damit zeigt ein Handy oder Tablet das Etikett live: Es scannt einen QR-Code und folgt jeder Änderung.",
     roomDisclosure: "<b>Hinweis:</b> Beim Start verbindet sich diese Seite mit dem Drittanbieter <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (sichtbar: deine <mark>IP-Adresse</mark>, die Seitenadresse, deine Browser-Kennung und eine Zufalls-ID). <mark>Etikett-Daten gehen erst raus, wenn ein Gerät den QR-Code geöffnet hat</mark>, dann aber <mark>Ende-zu-Ende verschlüsselt</mark> und vom Dienst <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'><mark>bis zu 12 Stunden</mark> zwischengespeichert</a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details und Datenschutz-Hinweise in der README</a>.",
     roomCount: n => `Heute gesendet: ${n} von etwa 250 Nachrichten (Limit des kostenlosen Dienstes).`, roomLimit: "Limit des kostenlosen Dienstes erreicht. Es geht nach einer Pause oder morgen weiter.",
     roomWaiting: "Wartet auf das erste Gerät. Bisher wurde nichts gesendet.", roomLive: "Läuft: Änderungen gehen sofort an alle Geräte, die den QR-Code geöffnet haben.", roomOffline: "Kein Kontakt zum Relay-Dienst (Internet?). Der zweite Bildschirm bekommt erst wieder Änderungen, wenn er erreichbar ist.", roomOff: "Wird nicht geteilt.",
-    clear: "Leeren", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLabel: "Seitenränder (cm)",
+    clear: "Zurücksetzen", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLabel: "Seitenränder (cm)",
     sizeInfo: (l, w) => `Etikett ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Gesendet in ${sec} s (${bytes} Bytes) – warte auf den Druck …`,
     noBluetooth: "Web Bluetooth fehlt – bitte Chrome oder Edge über localhost/HTTPS nutzen.",
@@ -378,7 +395,7 @@ const T = {
   },
   en: {
     langTitle: "Sprache / Language", themeTitle: "Toggle light / dark", themeAria: "Switch appearance",
-    titleLabel: "Title text", lockTitle: "Lock the title: “Clear” then keeps it", titlePh: "Your event title", greetingLabel: "Intro line (optional)", greetingPh: "e.g. Hello, I'm",
+    titleLabel: "Title text", lockTitle: "Lock the title: “Reset” then keeps it", titlePh: "Your event title", greetingLabel: "Intro line (optional)", greetingPh: "e.g. Hello, I'm",
     maleTitle: "Male form", maleAria: "Man", femaleTitle: "Female form", femaleAria: "Woman",
     dice1Title: "Random positive adjective", dice2Title: "Two random positive adjectives", dice3Title: "Three random positive adjectives",
     backTitle: "Restore previous intro line", clearGreetingTitle: "Clear intro line",
@@ -398,19 +415,20 @@ const T = {
     csvHeader: "Name;Real name;Printed", nickMode: "Overwrite nicknames with real names", realLabel: "Real name (search or complete)", realPh: "Real name, for receipts", yes: "Yes", no: "No", csvFile: "attendees",
     print: "Print", lengthLabel: "Label length (mm, paper runs sideways)", autoLength: "Calculate length automatically from the content",
     flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
+    bubbles: "Speech bubbles in the live view", bubbleNamePh: "Tell us your name", bubbleGreetingPh: "Which {name} are you?", bubbleTagsPh: "What excites you?", bubbleHint: "Leave empty for the default. {name} = name on the label.",
     openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
     openTop: "Open the second screen (live view) in a new window", welcomeLabel: "Second screen text (optional)", welcomeTitlePh: "Welcome!", welcomeSubPh: "Get your name tag here!", welcomeClearTitle: "Clear the second screen text",
-    close: "Close", copy: "Copy", copied: "Copied",
+    close: "Close",
     roomBtn: "Second screen on another device (QR code)", roomBtnOn: "Second screen is running (QR code)",
     roomHeading: "Open the second screen on another device",
     roomExplain: "Scan the QR code with a phone or tablet. The label then follows live.",
-    roomEach: "After each print a new QR code is created; each guest only keeps their own name tag.",
-    roomHide: "Do not show this notice again", roomPrivacyLink: "Privacy notes (README)", roomNew: "New code", roomStop: "Stop sharing", cancel: "Cancel", roomStart: "Start sharing",
+    roomEach: "<b>Privacy notice:</b> The guest sees an information notice on their phone before anything is transferred. After each print a new QR code is created; each guest only keeps their own name tag.",
+    roomHide: "Do not show this notice again", roomNew: "New code", roomStop: "Stop sharing", cancel: "Cancel", roomStart: "Start sharing",
     roomIntro: "With this, a phone or tablet can show the label live: it scans a QR code and follows every change.",
     roomDisclosure: "<b>Note:</b> when you start, this page connects to the third party <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (visible: your <mark>IP address</mark>, the page address, your browser type and a random ID). <mark>Label data only leaves once a device has opened the QR code</mark>, but then <mark>end-to-end encrypted</mark> and <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'>cached by the service <mark>for up to 12 hours</mark></a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details and privacy notes in the README</a>.",
     roomCount: n => `Sent today: ${n} of about 250 messages (limit of the free service).`, roomLimit: "Limit of the free service reached. It continues after a pause or tomorrow.",
     roomWaiting: "Waiting for the first device. Nothing has been sent yet.", roomLive: "Running: changes go to every device that has opened the QR code right away.", roomOffline: "The relay is not reachable (internet?). The second screen gets changes again once it is.", roomOff: "Not shared.",
-    clear: "Clear", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLabel: "Side margins (cm)",
+    clear: "Reset", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLabel: "Side margins (cm)",
     sizeInfo: (l, w) => `Label ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Sent in ${sec} s (${bytes} bytes) – waiting for the print …`,
     noBluetooth: "Web Bluetooth is missing – please use Chrome or Edge via localhost/HTTPS.",
@@ -477,6 +495,7 @@ function labelModel() {
 function drawLabel() {
   const model = labelModel();
   const plan = Label.plan(model);
+  liveRegions = plan.regions; liveName = Label.displayName(model.name || "", model.firstOnly !== false);
   if (model.autoLength) $("length").value = Math.round(plan.lengthPx * zoom / DOTS_PER_MM);   // gedruckte Länge in mm
   $("length").disabled = model.autoLength;
 
@@ -521,8 +540,8 @@ function toOneBit(ctx) {
 
 // Eingaben und Optionen bleiben beim Neuladen erhalten (localStorage; ohne Zugriff startet die Seite leer).
 const FIELDS_KEY = "meetupapp.fields";
-const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub"];
-const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
+const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub", "bubbleName", "bubbleGreeting", "bubbleTags"];
+const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode", "bubbles"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
     const state = { gender, rollCount, zoom, sideCm, titleLocked: titleLocked() };
@@ -533,7 +552,7 @@ function saveFields() {
 }
 
 // Live-Ansicht (view.html in einem zweiten Fenster, z. B. auf dem anderen Monitor): jedes neue Etikett als PNG senden
-let liveChannel = null;
+let liveChannel = null, liveRegions = null, liveName = "";
 try { liveChannel = new BroadcastChannel("meetup-label"); } catch {}
 // Text für den zweiten Bildschirm (Willkommen + kleinere Zeile) geht mit jedem Etikett an die Live-Ansicht und an das gekoppelte Gerät
 const welcomeText = () => ({ title: $("welcomeTitle").value.trim(), sub: $("welcomeSub").value.trim() });
@@ -542,13 +561,28 @@ function publishLabel() {
   if (!liveChannel) return;
   const image = canvas.toDataURL("image/png");
   const welcome = welcomeText();
-  liveChannel.postMessage({ type: "label", image, welcome });
+  liveChannel.postMessage({ type: "label", image, welcome, regions: liveRegions, name: liveName, bubbles: $("bubbles").checked });
   try { localStorage.setItem("meetupapp.live", image); localStorage.setItem("meetupapp.welcome", JSON.stringify(welcome)); } catch {}
 }
 
 // Raum-Link an die Live-Ansicht (zweites Fenster) melden: dort sieht der Teilnehmer den QR-Code und scannt ihn mit dem eigenen Handy
-function announcePair() { liveChannel?.postMessage(room ? { type: "pair", link: roomLink() } : { type: "pair-clear" }); }
-liveChannel && (liveChannel.onmessage = event => { if (event.data?.type === "hello") { publishLabel(); announcePair(); } });
+let pairShown = true;   // der QR-Code in der Live-Ansicht ist nur zu sehen, solange der Dialog offen ist (und nach dem Druck für den nächsten Gast)
+function announcePair() { liveChannel?.postMessage(room && pairShown ? { type: "pair", link: roomLink() } : { type: "pair-clear" }); }
+// Sprechblasen in der Live-Ansicht: je nach Feld, in dem der Cursor steht (Name, Zwischenzeile samt Würfeln, Hashtags)
+const hintField = el => el?.id === "name" ? "name" : el?.id === "greeting" || el?.closest?.(".rolls") ? "greeting" : el?.id === "tags" ? "tags" : "";
+const BUBBLE_TEXT_IDS = { name: "bubbleName", greeting: "bubbleGreeting", tags: "bubbleTags" };
+function announceFocus() {
+  const field = $("bubbles").checked ? hintField(document.activeElement) : "";
+  const ideas = field === "greeting" ? (lang === "en" ? ADJECTIVES_EN : ADJECTIVES).map(adjective) : null;   // Beispiel-Adjektive in der gewählten Form (Großartiger / Großartige / Großartige(r)) zum Auf- und Abblenden in der Live-Ansicht
+  liveChannel?.postMessage({ type: "focus", field, enabled: $("bubbles").checked, gender, ideas, text: field ? $(BUBBLE_TEXT_IDS[field]).value.trim() : "" });   // text: eigener Text aus den Einstellungen, leer = Standardtext der Live-Ansicht
+}
+$("bubbles").addEventListener("change", () => { for (const id of Object.values(BUBBLE_TEXT_IDS)) $(id).disabled = !$("bubbles").checked; announceFocus(); saveFields(); });   // gender: "m", "f" oder null (für „Welcher/Welche“)
+document.addEventListener("focusin", announceFocus);
+$("genderM").addEventListener("click", () => setTimeout(announceFocus));
+$("genderF").addEventListener("click", () => setTimeout(announceFocus));
+document.addEventListener("focusout", () => setTimeout(announceFocus));   // erst nach dem Wechsel prüfen, wohin der Fokus gegangen ist
+addEventListener("blur", () => liveChannel?.postMessage({ type: "focus", field: "" }));   // Fenster verlassen: keine Blase
+liveChannel && (liveChannel.onmessage = event => { if (event.data?.type === "hello") { publishLabel(); announcePair(); announceFocus(); } });
 
 // Winzige Zacken am linken und rechten Rand wie bei einem abgerissenen Etikett (clip-path in angezeigten Pixeln)
 function sawEdges(w, h) {
@@ -945,6 +979,79 @@ $("checkOff").addEventListener("click", () => {
   save(); renderList();
 });
 $("name").addEventListener("input", () => { updateCheckOff(); syncRealField(); });
+
+// Auswahlliste für das Namensfeld: filtert beim Tippen (Anfang des Namens, Anfang eines Wortes, dann irgendwo), hebt den Treffer hervor,
+// zeigt Abgehaktes am Ende und lässt sich mit Pfeiltasten + Enter oder per Klick bedienen
+const suggest = { open: false, items: [], active: -1 };
+const fold = text => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+function suggestionMatches() {
+  const q = fold($("name").value.trim()), nick = $("nickMode").checked;
+  const scored = [];
+  people.forEach((person, index) => {
+    const name = fold(person.name), real = nick && person.real ? fold(person.real) : "";
+    let score = 9;
+    if (!q) score = 0;
+    else if (name.startsWith(q)) score = 0;
+    else if (name.split(/[\s-]+/).some(word => word.startsWith(q))) score = 1;
+    else if (real && real.split(/[\s-]+/).some(word => word.startsWith(q))) score = 2;
+    else if (name.includes(q) || real.includes(q)) score = 3;
+    if (score < 9) scored.push({ person, score, index });
+  });
+  scored.sort((a, b) => Number(a.person.done) - Number(b.person.done) || a.score - b.score || a.index - b.index);
+  return scored.map(entry => entry.person);
+}
+function closeSuggest() { suggest.open = false; $("nameSuggest").hidden = true; $("name").setAttribute("aria-expanded", "false"); $("name").removeAttribute("aria-activedescendant"); }
+function highlight(text, q) {
+  const frag = document.createDocumentFragment(), at = q ? fold(text).indexOf(q) : -1;
+  if (at < 0) { frag.append(text); return frag; }
+  frag.append(text.slice(0, at), Object.assign(document.createElement("b"), { textContent: text.slice(at, at + q.length) }), text.slice(at + q.length));
+  return frag;
+}
+function refreshSuggest() {
+  const matches = suggestionMatches(), q = fold($("name").value.trim()), list = $("nameSuggest");
+  const exactOnly = matches.length === 1 && matches[0].name.toLowerCase() === $("name").value.trim().toLowerCase();
+  if (!matches.length || exactOnly || document.activeElement !== $("name")) { closeSuggest(); return; }   // nichts zu wählen: Liste zu
+  suggest.items = matches.slice(0, 60); suggest.active = -1;
+  list.replaceChildren(...suggest.items.map((person, i) => {
+    const li = document.createElement("li");
+    li.id = "nameSuggest" + i; li.setAttribute("role", "option"); li.className = person.done ? "done" : "";
+    const label = document.createElement("span");   // eigener Kasten, sonst setzt das Flex-Layout Lücken zwischen die Textteile
+    label.append(person.done ? "✓ " : "", highlight(person.name, q));
+    li.append(label);
+    if ($("nickMode").checked && person.real) li.append(Object.assign(document.createElement("span"), { className: "real", textContent: person.real }));
+    li.addEventListener("mousedown", event => event.preventDefault());   // das Feld behält den Fokus (sonst schließt der Blur die Liste vor dem Klick)
+    li.addEventListener("click", () => chooseSuggestion(i));   // click statt pointerdown: ein Wischen zum Scrollen wählt nichts aus
+    return li;
+  }));
+  if (matches.length > suggest.items.length) list.append(Object.assign(document.createElement("li"), { className: "more", textContent: "… " + (matches.length - suggest.items.length) }));
+  const box = $("name").getBoundingClientRect();
+  list.style.left = box.left + "px"; list.style.top = box.bottom + 4 + "px"; list.style.width = box.width + "px";
+  list.hidden = false; suggest.open = true; $("name").setAttribute("aria-expanded", "true");
+}
+function moveSuggest(step) {
+  if (!suggest.open) { refreshSuggest(); if (!suggest.open) return; }
+  const count = suggest.items.length;
+  suggest.active = (suggest.active + step + count + (suggest.active < 0 && step < 0 ? 1 : 0)) % count;
+  [...$("nameSuggest").children].forEach((li, i) => li.setAttribute("aria-selected", String(i === suggest.active)));
+  const li = $("nameSuggest").children[suggest.active];
+  li.scrollIntoView({ block: "nearest" }); $("name").setAttribute("aria-activedescendant", li.id);
+}
+function chooseSuggestion(i) {
+  $("name").value = suggest.items[i].name;
+  closeSuggest();
+  $("name").dispatchEvent(new Event("input", { bubbles: true }));   // wie getippt: Etikett, Haken und echter Name ziehen nach
+}
+$("name").addEventListener("input", refreshSuggest);
+$("name").addEventListener("click", refreshSuggest);   // nur bei Klick/Tipp ins Feld, nicht bei Fokus per Skript (z. B. nach „Zurücksetzen“)
+$("name").addEventListener("blur", closeSuggest);
+$("name").addEventListener("keydown", event => {
+  if (event.key === "ArrowDown") { event.preventDefault(); moveSuggest(1); }
+  else if (event.key === "ArrowUp") { event.preventDefault(); moveSuggest(-1); }
+  else if (event.key === "Enter" && suggest.open && suggest.active >= 0) { event.preventDefault(); chooseSuggestion(suggest.active); }
+  else if (event.key === "Escape" && suggest.open) { event.stopPropagation(); closeSuggest(); }
+});
+addEventListener("resize", () => { if (suggest.open) refreshSuggest(); });   // z. B. die Bildschirmtastatur am Handy: Liste neu platzieren statt schließen
+addEventListener("scroll", event => { if (event.target !== $("nameSuggest")) closeSuggest(); }, true);   // die Seite scrollt: Liste zu; Scrollen in der Liste selbst nicht
 $("download").addEventListener("click", downloadList);
 $("removeList").addEventListener("click", () => {
   const checked = people.filter(p => p.done).length;
@@ -986,13 +1093,14 @@ const article = () => (lang === "en" ? "The" : gender === "m" ? "Der" : gender =
 let lastRoll = null;   // { kind: "adj" | "article" | "list", words: [...] }
 let lastText = "";
 
+const lowerFirst = w => w[0].toLowerCase() + w.slice(1);
 function formatRoll(roll) {
   if (roll.kind === "list") {   // "Großartiger", "Großartiger & Genialer", "Großartiger, Genialer & Mutiger"
     // nur das erste Adjektiv beginnt groß: "Großartiger, genialer & mutiger"
     const words = roll.words.map((w, i) => adjective(i ? w[0].toLowerCase() + w.slice(1) : w));
     return words.length === 1 ? words[0] : `${words.slice(0, -1).join(", ")} & ${words[words.length - 1]}`;
   }
-  if (roll.kind === "article") return `${article()} ${roll.words[0]}`;
+  if (roll.kind === "article") return `${article()} ${lang === "en" ? roll.words[0] : lowerFirst(roll.words[0])}`;   // deutsch: nach dem Artikel klein ("Der großartige"), der Name folgt ja
   return adjective(roll.words[0]);
 }
 
@@ -1052,11 +1160,11 @@ function adjectiveForm(tok) {
   return gender === "m" ? base + "r" : gender === "f" ? base : base + "(r)";
 }
 // Erkennt die Adjektive aus der Liste auch ohne gemerkten Wurf (z. B. nach dem Neuladen oder bei selbst getipptem Text).
-// Nach einem Artikel bleibt das Adjektiv in der Grundform: "Der Tolle", "Die Tolle".
+// Nach einem Artikel bleibt das Adjektiv in der Grundform und wird klein geschrieben: "Der tolle", "Die tolle".
 function convertText(text) {
   const article = gender === "m" ? "Der" : gender === "f" ? "Die" : "Der/Die";
   return text.replace(/(?:(Der\/Die|Der|Die)(\s+))?([\p{L}]+(?:\(r\))?)/gu, (all, art, space, tok) => {
-    if (art && adjectiveBase(tok) !== null) return article + space + adjectiveBase(tok);
+    if (art && adjectiveBase(tok) !== null) return article + space + lowerFirst(adjectiveBase(tok));
     return (art ? art + space : "") + adjectiveForm(tok);
   });
 }
@@ -1093,7 +1201,6 @@ $("dice3").addEventListener("click", () => rollGreeting(3));
 
 $("welcomeClear").addEventListener("click", () => { $("welcomeTitle").value = ""; $("welcomeSub").value = ""; render(); $("welcomeTitle").focus(); });
 $("clear").addEventListener("click", () => {
-  roomHold = false;   // nach "Clear" ist das Etikett leer: ein wartender Raum darf wieder senden
   setFirstOnly(true);
   pushHistory();   // die Zwischenzeile lässt sich mit ↩️ zurückholen
   $("greeting").value = "";
@@ -1102,12 +1209,13 @@ $("clear").addEventListener("click", () => {
   $("tags").value = "";
   if (!titleLocked()) $("title").value = "";   // Schloss offen: auch der Titel wird geleert; mit Schloss bleibt er stehen
   updateCheckOff();   // das Feld wurde per Skript geleert: der Haken neben dem Namen muss mit weg
+  if (room) startRoom({ blank: true, quiet: true });   // frischer Code (der alte Gast behält sein Etikett), in der Live-Ansicht aber ohne QR-Code, bis der Dialog wieder geöffnet wird
   render();
   $("name").focus();
 });
 $("length").addEventListener("input", render);
 $("autoLength").addEventListener("change", render);
-// Schloss am Titel: zu = "Clear" lässt den Titel stehen, offen (Standard) = "Clear" leert ihn mit. Der Titel bleibt immer änderbar.
+// Schloss am Titel: zu = "Reset" lässt den Titel stehen, offen (Standard) = "Reset" leert ihn mit. Der Titel bleibt immer änderbar.
 function setTitleLock(on) {
   $("titleLock").setAttribute("aria-pressed", String(on));
   $("titleLock").textContent = on ? "🔒" : "🔓";
@@ -1126,6 +1234,7 @@ function restoreFields() {
   for (const id of TEXT_FIELDS) if (typeof state[id] === "string") $(id).value = state[id];
   if (typeof state.welcomeTitle !== "string" && typeof state.welcomeSub !== "string") setWelcomeDefaults(lang);   // erster Start: Vorgabetexte
   for (const id of CHECK_FIELDS) if (typeof state[id] === "boolean") $(id).checked = state[id];
+  for (const id of Object.values(BUBBLE_TEXT_IDS)) $(id).disabled = !$("bubbles").checked;
   if (state.gender === "m" || state.gender === "f") {
     gender = state.gender;
     $("genderM").setAttribute("aria-pressed", String(gender === "m"));
@@ -1208,7 +1317,8 @@ let room = null;            // { topic, key, token } oder null (wird nicht getei
 let roomTimer = null, roomLastSent = 0, roomDirty = false, roomHold = false, roomJoined = false, roomListener = null;
 const blankPayload = () => ({ model: { ...labelModel(), name: "", greeting: "", tags: "" }, welcome: welcomeText() });
 
-const roomLink = () => { const url = new URL("view.html", location.href); url.hash = "r=" + room.token; return url.href; };
+// Von file:// aus kann ein Handy den Link nicht öffnen: dann zeigt der Link auf die öffentliche Seite
+const roomLink = () => { const url = new URL("view.html", location.protocol === "file:" ? "https://feststelltaste.github.io/nametagapp/" : location.href); url.hash = "r=" + room.token; return url.href; };
 
 let roomError = null, roomLastJson = "";
 const todayKey = () => new Date().toISOString().slice(0, 10);
@@ -1235,31 +1345,31 @@ function scheduleRoom(now = false) {
 }
 
 // Neuer Raum. Nach dem Druck (blank) beginnt er leer, ohne Namen und Hashtags des vorigen Gastes, und wird erst beim nächsten Tippen aktuell.
-function startRoom({ blank = false } = {}) {
+function startRoom({ blank = false, quiet = false } = {}) {
   clearTimeout(roomTimer); roomTimer = null; roomListener?.close();
   room = Relay.createRoom();
   roomError = null; roomLastJson = ""; roomJoined = false; roomHold = blank;
   // Nichts senden, bis sich ein Gerät meldet. Meldet sich eins (auch erneut nach einem Verbindungsabbruch), geht der Stand raus;
   // in einem Raum nach dem Druck der leere Stand, bis jemand tippt.
   roomListener = Relay.listen(room, () => { roomJoined = true; roomLastJson = ""; sendRoom(roomHold ? blankPayload() : undefined); updateRoomUi(); });
-  announcePair(); updateRoomUi();
+  pairShown = !quiet; announcePair(); updateRoomUi();
 }
 function stopRoom() {
   clearTimeout(roomTimer); roomTimer = null; roomListener?.close(); roomListener = null;
   room = null; roomHold = false; roomJoined = false; roomError = null; roomLastJson = "";
   announcePair(); updateRoomUi();
 }
-const NOTICE_KEY = "meetupapp.roomNoticeHidden";
-const noticeHidden = () => { try { return localStorage.getItem(NOTICE_KEY) === "1"; } catch { return false; } };
+let noticeHiddenNow = false;   // nur im Speicher: nach einem Neuladen der Seite erscheint der Hinweis wieder
+const noticeHidden = () => noticeHiddenNow;
 function updateRoomUi() {
   const on = Boolean(room);
   for (const el of document.querySelectorAll(".roomNotice")) el.hidden = noticeHidden();
-  for (const el of document.querySelectorAll(".roomLinkOnly")) el.hidden = !noticeHidden();   // der Hinweis erscheint nur, bis man ihn ausblendet; der README-Link bleibt
   $("roomBtn").setAttribute("aria-pressed", String(on));
   $("roomBtn").title = $("roomBtn").ariaLabel = on ? t("roomBtnOn") : t("roomBtn");
   $("roomOff").hidden = on; $("roomOn").hidden = !on;
   $("roomState").textContent = !on ? "" : roomError === "limit" ? t("roomLimit") : roomError === "offline" ? t("roomOffline")
-    : !roomJoined ? t("roomWaiting") + " " + t("roomCount", roomSentToday()) : t("roomLive") + " " + t("roomCount", roomSentToday());
+    : !roomJoined ? t("roomWaiting") : t("roomLive");
+  $("roomQuota").textContent = on ? t("roomCount", roomSentToday()) : "";
   $("roomState").classList.toggle("bad", on && roomError !== null);
   if (!on) { $("roomLink").value = ""; $("roomQr").innerHTML = ""; return; }
   const link = roomLink();
@@ -1269,19 +1379,16 @@ function updateRoomUi() {
   }
 }
 
-$("roomBtn").addEventListener("click", () => { $("roomBox").hidden = false; updateRoomUi(); });   // ohne Start wird nichts gesendet
+function closeRoomBox() { $("roomBox").hidden = true; pairShown = false; announcePair(); }   // Dialog zu: auch der QR-Code in der Live-Ansicht verschwindet
+$("roomBtn").addEventListener("click", () => { $("roomBox").hidden = false; pairShown = true; announcePair(); updateRoomUi(); });   // ohne Start wird nichts gesendet
 $("roomStart").addEventListener("click", () => {
-  if ($("roomHide").checked) { try { localStorage.setItem(NOTICE_KEY, "1"); } catch {} }   // beim ersten Start "nicht mehr anzeigen" gewählt
+  if ($("roomHide").checked) noticeHiddenNow = true;   // beim ersten Start "nicht mehr anzeigen" gewählt
   startRoom();
 });
-$("roomCancel").addEventListener("click", () => { $("roomBox").hidden = true; });
-$("roomClose").addEventListener("click", () => { $("roomBox").hidden = true; });
+$("roomCancel").addEventListener("click", closeRoomBox);
+$("roomClose").addEventListener("click", closeRoomBox);
 $("roomNew").addEventListener("click", () => startRoom());
-$("roomStop").addEventListener("click", () => { stopRoom(); $("roomBox").hidden = true; });
-$("roomCopy").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText($("roomLink").value); } catch { $("roomLink").select(); document.execCommand?.("copy"); }
-  $("roomCopy").textContent = t("copied"); setTimeout(() => { $("roomCopy").textContent = t("copy"); }, 1500);
-});
+$("roomStop").addEventListener("click", () => { stopRoom(); closeRoomBox(); });
 
 // QR-Code zur Seite https://feststelltaste.github.io/nametagapp/ (vorab erzeugt, ECC M); erscheint beim Klick auf den Titel, Klick oder Esc schließt ihn
 const PAGE_QR = ["111111100101110001111011001111111", "100000100000011101000010001000001", "101110101101110001101001101011101", "101110101110001110001110101011101", "101110101100110100100100101011101", "100000101000111110001110001000001", "111111101010101010101010101111111", "000000001000000100000101000000000", "101111100010011101101011001111100", "010110001101100010111101001101101", "011111101011000110101100100010110", "111110000110001110010110010011111", "101000101010100100100100110111011", "010011001110001111001111101001011", "100101110100111001010110111100010", "101100010100101010111110111001100", "000100101100100011011010010110001", "101101000001010011111001001101101", "110000101110101101001010010110100", "110111010110000101100001111111111", "000110110111010010001110010011011", "101001001000001100100001001000101", "100111111110111111001110110001110", "101010011001011100000100101001100", "100000110111000101000010111110011", "000000001100011010111101100010101", "111111100010000100100101101010110", "100000101100101110001111100011110", "101110101110110100100100111111001", "101110101111110111001011110011001", "101110101111111000110111101101100", "100000100110100010011101000011100", "111111101000011011011011110100010"];
@@ -1296,7 +1403,7 @@ function drawRepoQr() {
 }
 $("logo").addEventListener("click", () => { drawRepoQr(); $("qrbox").hidden = false; });
 $("qrbox").addEventListener("click", () => { $("qrbox").hidden = true; });
-addEventListener("keydown", e => { if (e.key === "Escape") { $("qrbox").hidden = true; $("roomBox").hidden = true; } });
+addEventListener("keydown", e => { if (e.key === "Escape") { $("qrbox").hidden = true; if (!$("roomBox").hidden) closeRoomBox(); } });
 $("lang").addEventListener("click", () => {
   const was = lang;
   lang = lang === "de" ? "en" : "de";
