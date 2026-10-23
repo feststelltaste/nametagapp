@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f5f4">
+<title>NametagApp – live</title>
+<style>
+  :root { --bg:#f5f5f4; --fg:#1c1917; --muted:#78716c; --line:#d6d3d1; --accent:#c8102e; color-scheme:light; }   /* wie die App im Light Mode */
+  * { box-sizing:border-box; }
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, sans-serif; overflow:hidden; }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:12px; touch-action:manipulation; }
+  #tag { display:none; max-width:none; max-height:none; background:#fff; position:relative; }   /* keine runden Ecken; die Zacken links und rechts setzt das Skript per clip-path */
+  #shadow { filter:drop-shadow(0 1px 2px rgba(0,0,0,.25)) drop-shadow(0 4px 14px rgba(0,0,0,.08)); }   /* Schatten außen, damit er die Zacken nachzeichnet */
+  #shadow { position:relative; flex:none; }
+  /* Trägerpapier: schmale hellbeige Streifen nur über und unter dem Etikett; links und rechts (in den Zacken) ist kein Rand zu sehen */
+  #shadow::before { content:""; position:absolute; left:2.5px; right:2.5px; top:-9px; bottom:-9px; background:#f0e6d0; border-block:1px solid #e2d5b8; }
+  #pair { position:fixed; inset:0; z-index:5; display:flex; align-items:center; justify-content:center; padding:16px; background:var(--bg); }
+  #pair[hidden] { display:none; }
+  #pair .card { width:min(480px, 100%); background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; box-shadow:0 4px 24px rgba(0,0,0,.08); }
+  #pair h2 { margin:0 0 6px; font-size:1.15rem; }
+  #pair p { margin:8px 0; }
+  #pair .small { font-size:.85rem; color:var(--muted); }
+  #pairCode { width:100%; font:.75rem/1.3 ui-monospace, Consolas, monospace; padding:8px; border:1px solid var(--line); border-radius:8px; background:#fafaf9; color:var(--fg); resize:none; }
+  .pairbtns { display:flex; gap:8px; margin-top:8px; }
+  .pairbtns button { font:inherit; padding:10px 16px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:#fff; }
+  .pairbtns button + button { background:transparent; color:var(--fg); border-color:var(--line); }
+  #lostNote { display:none; position:fixed; left:0; right:0; bottom:8px; text-align:center; font-size:.8rem; color:var(--muted); z-index:2; }
+  body.lost #lostNote { display:block; }
+  #wait { text-align:center; color:var(--muted); padding:24px; }
+  #wait b { display:block; color:var(--fg); font-size:1.3rem; margin-bottom:6px; }
+</style>
+</head>
+<body>
+<div id="pair" hidden>
+  <div class="card">
+    <h2 id="pairTitle"></h2>
+    <p id="pairText"></p>
+    <textarea id="pairCode" readonly rows="4" spellcheck="false" hidden></textarea>
+    <div class="pairbtns" id="pairBtns" hidden>
+      <button type="button" id="pairCopy"></button>
+      <button type="button" id="pairShare" hidden></button>
+    </div>
+    <p id="pairHint" class="small"></p>
+  </div>
+</div>
+<div id="lostNote"></div>
+<div id="stage">
+  <div id="shadow"><img id="tag" alt="Namensschild"></div>
+  <div id="wait"><b>Noch kein Namensschild</b>Öffne den Editor im selben Browser (gleiche Adresse). Sobald dort ein Etikett erscheint, siehst du es hier live.</div>
+</div>
+
+<script src="vendor/qrcode.js"></script>
+<script src="mirror.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const tag = $("tag");
+
+
+function fit() {
+  if (!tag.naturalWidth) return;
+  const boxW = innerWidth - 24, boxH = innerHeight - 24 - 20;   // 20 px für die Trägerpapier-Streifen oben und unten
+  const scale = Math.min(boxW / tag.naturalWidth, boxH / tag.naturalHeight);   // das Etikett bleibt immer liegend und wird nur skaliert
+  tag.style.width = Math.floor(tag.naturalWidth * scale) + "px";
+  tag.style.height = Math.floor(tag.naturalHeight * scale) + "px";
+  tag.style.clipPath = sawEdges(Math.floor(tag.naturalWidth * scale), Math.floor(tag.naturalHeight * scale));
+}
+
+// Winzige Zacken am linken und rechten Rand, wie bei einem abgerissenen Etikett (clip-path in Bildpixeln)
+function sawEdges(w, h) {
+  const tooth = 5, depth = 2.5;                        // Höhe eines Zahns, Tiefe der Zacke
+  const n = Math.max(2, Math.round(h / tooth)), step = h / n;
+  const pts = [`${depth}px 0`, `${w - depth}px 0`];
+  for (let i = 0; i < n; i++) pts.push(`${w}px ${(i + 0.5) * step}px`, `${w - depth}px ${(i + 1) * step}px`);   // rechts nach unten
+  pts.push(`${depth}px ${h}px`);
+  for (let i = n - 1; i >= 0; i--) pts.push(`0px ${(i + 0.5) * step}px`, `${depth}px ${i * step}px`);          // links nach oben
+  return `polygon(${pts.join(",")})`;
+}
+
+function show(label) {
+  if (!label?.image) { tag.style.display = "none"; $("wait").style.display = ""; return; }
+  tag.onload = () => { fit(); tag.style.display = "block"; $("wait").style.display = "none"; };
+  tag.src = label.image;
+}
+
+// Der Editor (index.html) schickt jedes neue Etikett per BroadcastChannel an dieses Fenster. Beide Seiten
+// müssen vom selben Ursprung kommen (z. B. beide über http://localhost:8000) und im selben Browser laufen.
+const LIVE_KEY = "meetupapp.live";   // letztes Etikett, damit die Ansicht auch ohne offenen Editor etwas zeigt
+let channel = null;
+try {
+  channel = new BroadcastChannel("meetup-label");
+  channel.onmessage = event => { if (event.data?.type === "label") show({ image: event.data.image }); };
+  channel.postMessage({ type: "hello" });   // Editor antwortet mit dem aktuellen Etikett
+} catch { $("wait").textContent = "BroadcastChannel wird von diesem Browser nicht unterstützt."; }
+try { const last = localStorage.getItem(LIVE_KEY); if (last) show({ image: last }); } catch {}
+
+addEventListener("resize", fit);
+// ---------- Spiegelmodus: Kopplung per WebRTC ----------
+// Aufruf mit view.html#o=<Code>: Antwort-Code erzeugen, im Editor einfügen lassen, danach kommen die Etiketten live an.
+const TEXT = {
+  de: { connecting: "Verbindung wird aufgebaut …", answerTitle: "Antwort-Code", answerText: "Kopiere diesen Code und füge ihn im Editor unter Schritt 2 ein.",
+        copy: "Kopieren", copied: "Kopiert", share: "Teilen", hint: "Danach erscheint das Etikett hier automatisch. Diese Seite offen lassen.",
+        connected: "Verbunden", lost: "Verbindung getrennt. Öffne den Link im Editor neu.", bad: "Dieser Link ist ungültig oder abgelaufen. Erzeuge im Editor einen neuen." },
+  en: { connecting: "Connecting …", answerTitle: "Answer code", answerText: "Copy this code and paste it into the editor under step 2.",
+        copy: "Copy", copied: "Copied", share: "Share", hint: "The label then appears here automatically. Keep this page open.",
+        connected: "Connected", lost: "Connection lost. Open the link from the editor again.", bad: "This link is invalid or expired. Create a new one in the editor." },
+};
+let uiLang = (navigator.language || "de").toLowerCase().startsWith("de") ? "de" : "en";
+try { const saved = localStorage.getItem("meetupapp.lang"); if (saved === "de" || saved === "en") uiLang = saved; } catch {}
+const L = key => TEXT[uiLang][key];
+
+let guestConnection = null;
+async function pairFromHash() {
+  const match = location.hash.match(/^#o=([zr]\.[A-Za-z0-9_-]+)/);
+  if (!match) return;
+  guestConnection?.close(); guestConnection = null;   // neuer Link im selben Tab: alte Kopplung verwerfen
+  $("pairCode").value = ""; $("pairCode").hidden = $("pairBtns").hidden = true; document.body.classList.remove("lost");
+  $("pair").hidden = false;
+  $("pairTitle").textContent = L("connecting"); $("pairText").textContent = ""; $("pairHint").textContent = "";
+  try {
+    guestConnection = await Mirror.guest(match[1], {
+      onOpen: () => { $("pair").hidden = true; $("wait").style.display = "none"; },
+      onClose: () => {
+        if (tag.naturalWidth) { document.body.classList.add("lost"); $("lostNote").textContent = L("lost"); return; }   // Etikett bleibt stehen, nur ein Hinweis
+        $("pair").hidden = false; $("pairCode").hidden = $("pairBtns").hidden = true; $("pairTitle").textContent = L("lost"); $("pairText").textContent = ""; $("pairHint").textContent = "";
+      },
+      onMessage: message => { if (message?.type === "label") show({ image: message.image }); },
+    });
+  } catch { $("pairTitle").textContent = L("bad"); return; }
+  $("pairTitle").textContent = L("answerTitle");
+  $("pairText").textContent = L("answerText");
+  $("pairCode").value = guestConnection.code; $("pairCode").hidden = $("pairBtns").hidden = false;
+  $("pairCopy").textContent = L("copy");
+  $("pairHint").textContent = L("hint");
+  if (navigator.share) { $("pairShare").hidden = false; $("pairShare").textContent = L("share"); }
+}
+$("pairCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("pairCode").value); } catch { $("pairCode").select(); document.execCommand?.("copy"); }
+  $("pairCopy").textContent = L("copied"); setTimeout(() => { $("pairCopy").textContent = L("copy"); }, 1500);
+});
+$("pairShare").addEventListener("click", () => navigator.share({ text: $("pairCode").value }).catch(() => {}));
+$("pairCode").addEventListener("focus", () => $("pairCode").select());
+pairFromHash();
+addEventListener("hashchange", pairFromHash);   // ein neuer Link im selben Tab ändert nur den Teil nach dem #
+
+// Bildschirm anlassen, solange die Seite offen ist
+let wake = null;
+async function keepAwake() { try { wake = await navigator.wakeLock?.request("screen"); } catch {} }
+keepAwake();
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Meetup Nametag App</title>
+<title>NametagApp</title>
 <style>
   :root { --bg:#f5f5f4; --fg:#1c1917; --card:#fff; --line:#d6d3d1; --accent:#c8102e; --on-accent:#fff; --muted:#78716c; color-scheme:light; }
   @media (prefers-color-scheme: dark) {
@@ -27,7 +27,33 @@
     .settings { order:0; grid-column:2; grid-row:3; }
   }
   .head { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .headbtns { display:flex; gap:8px; }
+  .iconbtn { position:relative; width:auto; margin:0; padding:6px 10px; display:flex; align-items:center; background:transparent; color:var(--fg); border:1px solid var(--line); }
+  .iconbtn[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); }
+  .iconbtn[aria-pressed="true"]::after { content:""; position:absolute; top:3px; right:3px; width:8px; height:8px; border-radius:50%; background:#22c55e; }   /* grüner Punkt: verbunden */
+  #lang { width:auto; margin:0; padding:6px 12px; font-size:.85rem; font-weight:700; background:transparent; color:var(--fg); border:1px solid var(--line); }
   #theme { width:auto; margin:0; padding:6px 12px; font-size:1.1rem; background:transparent; color:var(--fg); border:1px solid var(--line); }
+  #logo { cursor:default; -webkit-tap-highlight-color:transparent; }   /* sieht nicht wie ein Link aus */
+  .modal { position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); padding:16px; overflow:auto; }
+  .modal[hidden] { display:none; }
+  .modal .card { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:14px; padding:18px; width:min(520px, 100%); max-height:100%; overflow:auto; box-shadow:0 10px 40px rgba(0,0,0,.35); }
+  .modal h2 { margin:0 0 8px; font-size:1.1rem; }
+  .modal p { margin:12px 0 6px; font-size:.9rem; }
+  .mirrorstate { padding:8px 10px; border-radius:8px; background:var(--accent-soft); font-size:.9rem; }
+  #mirrorQr svg { display:block; width:min(60vw, 260px); height:auto; margin:8px auto; border:1px solid var(--line); border-radius:6px; }
+  .linkrow { display:flex; gap:8px; }
+  .linkrow input { flex:1; min-width:0; font-size:.75rem; }
+  .linkrow button, #mirrorConnect, .mirrorbtns button { width:auto; margin:0; padding:8px 14px; background:transparent; color:var(--fg); border:1px solid var(--line); font-size:.9rem; }
+  #mirrorConnect { margin-top:8px; background:var(--accent-soft); border-color:var(--accent-edge); }
+  #mirrorAnswer { font-family:ui-monospace, Consolas, monospace; font-size:.75rem; min-height:64px; }
+  .mirroreach { display:flex; gap:8px; align-items:center; font-weight:400; font-size:.9rem; margin-top:12px; }
+  .mirrorbtns { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+  #qrbox { position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); }
+  #qrbox[hidden] { display:none; }
+  #qrbox .card { background:#fff; color:#1c1917; border-radius:14px; padding:20px 20px 14px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.35); max-width:92vw; }
+  #qrbox canvas { display:block; margin:0 auto; width:min(70vw, 280px); height:min(70vw, 280px); image-rendering:pixelated; border:0; background:#fff; }
+  #qrbox .url { margin-top:10px; font-size:.8rem; color:#57534e; word-break:break-all; }
+  h1 small { font-size:.55em; font-weight:400; color:var(--muted); margin-left:6px; }
   h1 { grid-column:1/-1; margin:0; font-size:1.4rem; }
   .settings { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
   .settings label:first-child { margin-top:0; }
@@ -40,13 +66,25 @@
   button { margin-top:16px; width:100%; padding:12px; font:inherit; font-weight:600; border:0; border-radius:8px; background:var(--accent); color:var(--on-accent); cursor:pointer; }
   button:disabled { opacity:.5; cursor:wait; }
   .preview { text-align:center; }
-  /* Dark Mode: Vorschau mit gedämpftem Weiß statt grellem Weiß, Schrift bleibt schwarz. Nur Anzeige, gedruckt wird unverändert. */
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) canvas { filter:brightness(.78); } }
-  :root[data-theme="dark"] canvas { filter:brightness(.78); }
-  canvas { max-width:100%; image-rendering:pixelated; border:1px dashed var(--line); background:#fff; }
+  /* Vorschau wie ein Etikett auf dem Trägerpapier: keine runden Ecken, winzige Zacken links und rechts (clip-path, per Skript),
+     schmale hellbeige Streifen oben und unten. Dark Mode: gedämpftes Weiß statt grellem Weiß (nur Anzeige, gedruckt wird unverändert). */
+  .tagwrap { position:relative; display:inline-block; margin:9px 0; max-width:100%; filter:drop-shadow(0 1px 2px rgba(0,0,0,.25)) drop-shadow(0 4px 14px rgba(0,0,0,.08)); }
+  .tagwrap::before { content:""; position:absolute; left:2.5px; right:2.5px; top:-9px; bottom:-9px; background:#f0e6d0; border-block:1px solid #e2d5b8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tagwrap { filter:brightness(.78) drop-shadow(0 1px 2px rgba(0,0,0,.5)); } }
+  :root[data-theme="dark"] .tagwrap { filter:brightness(.78) drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+  canvas { position:relative; display:block; max-width:100%; height:auto; background:#fff; }
   .people { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
   .people h2 { margin:0 0 8px; font-size:1.05rem; }
   .people input[type=file] { margin-bottom:8px; }
+  .settings h2 { margin:0 0 4px; font-size:1.05rem; }
+  .colorrow { display:flex; gap:10px; align-items:center; }
+  .colorrow input[type=color] { width:56px; height:38px; padding:2px; border:1px solid var(--line); border-radius:8px; background:transparent; cursor:pointer; }
+  .colorrow .chip { padding:8px 14px; }
+  .foot { grid-column:1/-1; order:9; text-align:center; font-size:.8rem; color:var(--muted); padding:8px 0 4px; }
+  .foot a { color:inherit; text-decoration:underline; }
+  .sizeinfo { color:var(--muted); opacity:.75; font-size:.8rem; text-align:center; order:1; margin-top:2px; }   /* leicht grau, unter dem Etikett */
+  .zoombtns { display:flex; gap:8px; }
+  .zoombtns .chip { padding:8px 16px; font-size:.95rem; }
   .name-row { display:flex; gap:8px; align-items:stretch; }
   .name-row input#name { flex:1; min-width:0; }
   .chip.two { padding:0 8px; font-size:.7rem; line-height:1.2; }
@@ -81,91 +119,241 @@
   .preview { display:flex; flex-direction:column; align-items:center; }
   .preview #print { flex:1; width:100%; min-height:90px; margin-top:12px; font-size:1.8rem; letter-spacing:.02em; order:3; }   /* riesig: füllt die Box bis nach unten */
   .preview #status { order:2; }
+  .preview .tagwrap { order:0; }
   #status { margin-top:12px; min-height:1.4em; color:var(--muted); font-size:.9rem; }
   #status.err { color:#dc2626; }
 </style>
 </head>
 <body>
 <main>
-  <div class="head"><h1>Meetup Nametag App</h1><button id="theme" type="button" title="Hell / Dunkel umschalten" aria-label="Darstellung umschalten">🌙</button></div>
+  <div class="head"><h1><span id="logo">NametagApp</span> <small>by feststelltaste</small></h1><span class="headbtns"><button id="mirrorBtn" type="button" class="iconbtn" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm10-2h2v2h-2zm4 0h2v2h-2zm-6 4h2v2h-2zm4 0h4v2h-4zm-2 2h2v2h-2zm4 0h2v2h-2z"/></svg></button><button id="lang" type="button" data-i18n-title="langTitle" title="Sprache / Language">EN</button><button id="theme" type="button" data-i18n-title="themeTitle" data-i18n-aria="themeAria" title="Hell / Dunkel umschalten" aria-label="Darstellung umschalten">🌙</button></span></div>
 
   <div class="col">
   <form id="form" autocomplete="off">
-    <label for="title">Titeltext</label>
+    <label for="title" data-i18n="titleLabel">Titeltext</label>
     <input id="title" value="" placeholder="Software Architecture Meetup Nürnberg">
 
-    <label for="greeting">Zwischenzeile (optional)</label>
-    <input id="greeting" value="" placeholder="z. B. Hallo, ich bin">
+    <label for="greeting" data-i18n="greetingLabel">Zwischenzeile (optional)</label>
+    <input id="greeting" value="" data-i18n-ph="greetingPh" placeholder="z. B. Hallo, ich bin">
     <div class="rolls">
-      <button id="genderM" type="button" class="toggle" aria-pressed="false" title="Männliche Form (Großartiger)" aria-label="Mann">👨</button>
-      <button id="genderF" type="button" class="toggle" aria-pressed="false" title="Weibliche Form (Großartige)" aria-label="Frau">👩</button>
-      <button id="dice" type="button" title="Zufälliges positives Adjektiv" aria-label="Ein Adjektiv würfeln">🎲</button>
-      <button id="dice2" type="button" title="Zwei zufällige positive Adjektive" aria-label="Zwei Adjektive würfeln"><span class="pair"><span>🎲</span><span>🎲</span></span></button>
-      <button id="dice3" type="button" title="Drei zufällige positive Adjektive" aria-label="Drei Adjektive würfeln"><span class="pair"><span>🎲</span><span>🎲</span><span>🎲</span></span></button>
-      <button id="greetingBack" type="button" class="toggle" title="Vorherige Zwischenzeile zurückholen" aria-label="Zurück" disabled>↩️</button>
-      <button id="greetingClear" type="button" class="toggle" title="Zwischenzeile leeren" aria-label="Zwischenzeile leeren">🗑️</button>
+      <button id="genderM" type="button" class="toggle" aria-pressed="false" data-i18n-title="maleTitle" data-i18n-aria="maleAria" title="Männliche Form (Großartiger)" aria-label="Mann">👨</button>
+      <button id="genderF" type="button" class="toggle" aria-pressed="false" data-i18n-title="femaleTitle" data-i18n-aria="femaleAria" title="Weibliche Form (Großartige)" aria-label="Frau">👩</button>
+      <button id="dice" type="button" data-i18n-title="dice1Title" data-i18n-aria="dice1Title" title="Zufälliges positives Adjektiv" aria-label="Ein Adjektiv würfeln">🎲</button>
+      <button id="dice2" type="button" data-i18n-title="dice2Title" data-i18n-aria="dice2Title" title="Zwei zufällige positive Adjektive" aria-label="Zwei Adjektive würfeln"><span class="pair"><span>🎲</span><span>🎲</span></span></button>
+      <button id="dice3" type="button" data-i18n-title="dice3Title" data-i18n-aria="dice3Title" title="Drei zufällige positive Adjektive" aria-label="Drei Adjektive würfeln"><span class="pair"><span>🎲</span><span>🎲</span><span>🎲</span></span></button>
+      <button id="greetingBack" type="button" class="toggle" data-i18n-title="backTitle" data-i18n-aria="backTitle" title="Vorherige Zwischenzeile zurückholen" aria-label="Zurück" disabled>↩️</button>
+      <button id="greetingClear" type="button" class="toggle" data-i18n-title="clearGreetingTitle" data-i18n-aria="clearGreetingTitle" title="Zwischenzeile leeren" aria-label="Zwischenzeile leeren">🗑️</button>
     </div>
 
-    <label for="name">Name (groß) – für die Suche auch Nachname möglich</label>
+    <label for="name" data-i18n="nameLabel">Name (groß) – für die Suche auch Nachname möglich</label>
     <div class="name-row">
-      <input id="name" list="people" value="" placeholder="Name eintippen oder aus der Liste wählen">
-      <button type="button" id="checkOff" class="chip check" aria-pressed="false" title="Diese Person in der Teilnehmerliste abhaken (ohne zu drucken)" aria-label="In der Liste abhaken">☐</button>
-      <button type="button" id="firstOnly" class="chip two" aria-pressed="true" title="Nur das erste Wort des Namens drucken (an/aus)">Nur<br>Vorname</button>
+      <input id="name" list="people" value="" data-i18n-ph="namePh" placeholder="Name eintippen oder aus der Liste wählen">
+      <button type="button" id="checkOff" class="chip check" aria-pressed="false" data-i18n-title="checkOffTitle" data-i18n-aria="checkOffTitle" title="Diese Person in der Teilnehmerliste abhaken (ohne zu drucken)" aria-label="In der Liste abhaken">☐</button>
+      <button type="button" id="firstOnly" class="chip two" aria-pressed="true" data-i18n-title="firstOnlyTitle" title="Nur das erste Wort des Namens drucken (an/aus)" data-i18n-html="firstOnly">Nur<br>Vorname</button>
     </div>
 
     <label for="tags">Hashtags</label>
-    <textarea id="tags" placeholder="#java #architektur #docs-as-code"></textarea>
-    <div class="hint">Getrennt durch Leerzeichen, Komma oder Zeilenumbruch. Das <code>#</code> wird bei Bedarf ergänzt.</div>
+    <textarea id="tags" data-i18n-ph="tagsPh" placeholder="#java #architektur #docs-as-code"></textarea>
+    <div class="hint" data-i18n-html="tagsHint">Getrennt durch Leerzeichen oder Komma. Jede Zeile bleibt eine eigene Zeile auf dem Etikett. Das <code>#</code> wird bei Bedarf ergänzt.</div>
   </form>
 
   <section class="people">
-    <h2>Teilnehmerliste</h2>
+    <h2 data-i18n="peopleTitle">Teilnehmerliste</h2>
     <input type="file" id="file" accept=".csv,.tsv,.txt,text/csv,text/plain">
-    <div class="hint" id="listInfo">CSV-Export von Meetup hochladen (oder eine Textdatei mit einem Namen pro Zeile). Danach schlägt das Namensfeld beim Tippen Namen vor, und gedruckte Namen werden abgehakt. Die Liste bleibt im Browser gespeichert.</div>
+    <div id="colConfig" hidden>
+      <label for="nameCol" data-i18n="colLabel">Spalte mit dem Namen</label>
+      <select id="nameCol"></select>
+    </div>
+    <div class="hint" id="listInfo"></div>
     <div id="checklist" hidden>
       <ul id="list"></ul>
       <div class="listbtns">
-        <button type="button" id="download" title="Liste mit Spalte „Gedruckt“ als CSV speichern">⬇ CSV herunterladen</button>
-        <button type="button" id="reset">Haken zurücksetzen</button>
+        <button type="button" id="download" data-i18n-title="downloadTitle" data-i18n="download" title="Liste mit Spalte „Gedruckt“ als CSV speichern">⬇ CSV herunterladen</button>
+        <button type="button" id="reset" data-i18n="reset">Haken zurücksetzen</button>
       </div>
-      <div class="hint">Die Haken liegen nur in diesem Browser. Zum Sichern oder für einen anderen Rechner: herunterladen und die Datei später wieder oben hochladen, die Haken kommen dann mit zurück.</div>
+      <div class="hint" data-i18n="checksHint">Die Haken liegen nur in diesem Browser. Zum Sichern oder für einen anderen Rechner: herunterladen und die Datei später wieder oben hochladen, die Haken kommen dann mit zurück.</div>
     </div>
   </section>
   </div>
 
   <div class="col">
   <div class="preview">
-    <canvas id="canvas"></canvas>
-    <button id="print" type="submit" form="form">Drucken</button>
+    <div class="tagwrap"><canvas id="canvas"></canvas></div>
+    <div id="sizeInfo" class="sizeinfo"></div>
+    <button id="print" type="submit" form="form" data-i18n="print">Drucken</button>
     <div id="status"></div>
   </div>
 
   <section class="settings">
-    <label for="length">Etikettenlänge (mm, Papier läuft quer)</label>
+    <h2 data-i18n="settingsTitle">Einstellungen</h2>
+    <label for="length" data-i18n="lengthLabel">Etikettenlänge (mm, Papier läuft quer)</label>
     <input id="length" type="number" min="25" max="100" step="1" value="80" disabled>
-    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="autoLength" checked style="width:auto"> Länge automatisch aus dem Inhalt berechnen</label>
-    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="flip" style="width:auto"> Drehrichtung umkehren (180°)</label>
-    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="rerollAfterPrint" checked style="width:auto"> Nach jedem Druck neu würfeln</label>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="autoLength" checked style="width:auto"> <span data-i18n="autoLength">Länge automatisch aus dem Inhalt berechnen</span></label>
+    <label data-i18n="zoomLabel" style="margin-top:12px">Zoom (Druckgröße)</label>
+    <div class="zoombtns" id="zoom" role="group">
+      <button type="button" class="chip" data-zoom="1" aria-pressed="true">1</button>
+      <button type="button" class="chip" data-zoom="0.75" aria-pressed="false">0,75</button>
+      <button type="button" class="chip" data-zoom="0.5" aria-pressed="false">0,5</button>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:12px"><input type="checkbox" id="flip" style="width:auto"> <span data-i18n="flip">Drehrichtung umkehren (180°)</span></label>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="rerollAfterPrint" checked style="width:auto"> <span data-i18n="reroll">Nach jedem Druck neu würfeln</span></label>
 
 
 
-    <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px">Name und Hashtags leeren</button>
+    <label for="accent" data-i18n="colorLabel" style="margin-top:12px">Hauptfarbe</label>
+    <div class="colorrow">
+      <input type="color" id="accent" value="#c8102e" aria-label="Hauptfarbe">
+      <button type="button" id="accentReset" class="chip" data-i18n="colorReset">Standard</button>
+    </div>
+
+    <button id="openView" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n-title="openViewTitle" data-i18n="openView" title="Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor">🖥 Live-Ansicht in neuem Fenster</button>
+    <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n="clear">Name und Hashtags leeren</button>
   </section>
   </div>
 
+  <footer class="foot">© Markus Harrer · <a href="https://github.com/feststelltaste/nametagapp" target="_blank" rel="noopener">github.com/feststelltaste/nametagapp</a></footer>
+
+  <div id="mirrorBox" class="modal" hidden>
+    <div class="card">
+      <h2 data-i18n="mirrorHeading">Zweites Gerät verbinden (Spiegelmodus)</h2>
+      <div id="mirrorState" class="mirrorstate"></div>
+      <div id="mirrorSteps">
+        <p data-i18n="mirrorStep1">1. Auf dem zweiten Gerät öffnen: QR-Code scannen oder den Link verschicken.</p>
+        <div id="mirrorQr"></div>
+        <div class="linkrow"><input id="mirrorLink" readonly><button type="button" id="mirrorCopy" data-i18n="copy">Kopieren</button></div>
+        <p data-i18n="mirrorStep2">2. Dort erscheint ein Antwort-Code. Füge ihn hier ein:</p>
+        <textarea id="mirrorAnswer" rows="3" spellcheck="false"></textarea>
+        <button type="button" id="mirrorConnect" data-i18n="connect">Verbinden</button>
+      </div>
+      <label class="mirroreach"><input type="checkbox" id="mirrorEach" style="width:auto"> <span data-i18n="mirrorEach">Nach jedem Druck neuen QR-Code erzeugen (der alte verfällt)</span></label>
+      <div class="mirrorbtns">
+        <button type="button" id="mirrorReset" data-i18n="repair">Neu koppeln</button>
+        <button type="button" id="mirrorClose" data-i18n="close">Schließen</button>
+      </div>
+      <div class="hint" data-i18n="mirrorHint">Die Verbindung läuft direkt zwischen den beiden Geräten, die Namen gehen über keinen Server. Nur zum Finden der Adresse wird ein öffentlicher STUN-Server gefragt. Nach einem Neuladen muss neu gekoppelt werden.</div>
+    </div>
+  </div>
+  <div id="qrbox" hidden><div class="card"><canvas id="qrcanvas" aria-label="QR-Code"></canvas><div class="url">github.com/feststelltaste/nametagapp</div></div></div>
   <datalist id="people"></datalist>
 </main>
 
+<script src="vendor/qrcode.js"></script>
+<script src="mirror.js"></script>
 <script>
 "use strict";
 
 // ---------- Etikett zeichnen ----------
+const PREVIEW_SCALE = 3;   // Vorschau in 3-facher Auflösung, damit sie glatt statt pixelig aussieht
+let zoom = 1;   // Druckgröße: 1, 0.75 oder 0.5 (Etikett insgesamt kleiner drucken)
 const WIDTH = 384, MARGIN = 10, DOTS_PER_MM = 8;   // WIDTH = Druckbreite des Druckers in Punkten
 const FONT_SANS = '"Arial Black", "Segoe UI", Arial, sans-serif';
 const FONT_TEXT = 'Arial, "Segoe UI", sans-serif';
 const FONT_CODE = 'Consolas, "Cascadia Mono", "Courier New", monospace';
 
 const $ = id => document.getElementById(id);
+
+// ---------- Sprache (Deutsch / English) ----------
+const T = {
+  de: {
+    langTitle: "Sprache / Language", themeTitle: "Hell / Dunkel umschalten", themeAria: "Darstellung umschalten",
+    titleLabel: "Titeltext", greetingLabel: "Zwischenzeile (optional)", greetingPh: "z. B. Hallo, ich bin",
+    maleTitle: "Männliche Form (Großartiger)", maleAria: "Mann", femaleTitle: "Weibliche Form (Großartige)", femaleAria: "Frau",
+    dice1Title: "Zufälliges positives Adjektiv", dice2Title: "Zwei zufällige positive Adjektive", dice3Title: "Drei zufällige positive Adjektive",
+    backTitle: "Vorherige Zwischenzeile zurückholen", clearGreetingTitle: "Zwischenzeile leeren",
+    nameLabel: "Name (groß) – für die Suche auch Nachname möglich", namePh: "Name eintippen oder aus der Liste wählen",
+    checkOffTitle: "Diese Person in der Teilnehmerliste abhaken (ohne zu drucken)",
+    firstOnly: "Nur<br>Vorname", firstOnlyTitle: "Nur das erste Wort des Namens drucken (an/aus)",
+    tagsPh: "#java #architektur #docs-as-code",
+    tagsHint: "Getrennt durch Leerzeichen oder Komma. Jede Zeile bleibt eine eigene Zeile auf dem Etikett. Das <code>#</code> wird bei Bedarf ergänzt.",
+    peopleTitle: "Teilnehmerliste", colLabel: "Spalte mit dem Namen",
+    colAuto: "Automatisch (Meetup-Format: Spalte „Name“)", colSplit: "Vorname + Nachname (zwei Spalten)",
+    listInfoDefault: "CSV-Export von Meetup hochladen (oder eine Textdatei mit einem Namen pro Zeile). Danach schlägt das Namensfeld beim Tippen Namen vor, und gedruckte Namen werden abgehakt. Die Liste bleibt im Browser gespeichert.",
+    listInfo: (n, d) => `${n} Teilnehmer, ${d} gedruckt – im Namensfeld tippen zum Suchen.`,
+    noNames: "Keine Namen gefunden – wähle oben die Spalte mit dem Namen.",
+    download: "⬇ CSV herunterladen", downloadTitle: "Liste mit Spalte „Gedruckt“ als CSV speichern", reset: "Haken zurücksetzen",
+    checksHint: "Die Haken liegen nur in diesem Browser. Zum Sichern oder für einen anderen Rechner: herunterladen und die Datei später wieder oben hochladen, die Haken kommen dann mit zurück.",
+    csvHeader: "Name;Gedruckt", yes: "Ja", no: "Nein", csvFile: "teilnehmer",
+    print: "Drucken", lengthLabel: "Etikettenlänge (mm, Papier läuft quer)", autoLength: "Länge automatisch aus dem Inhalt berechnen",
+    flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
+    openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
+    mirror: "📡 Mit zweitem Gerät verbinden", mirrorOn: "📡 Zweites Gerät verbunden", mirrorTitle: "Spiegelt das Etikett live auf ein zweites Gerät (WebRTC)",
+    mirrorHeading: "Zweites Gerät verbinden (Spiegelmodus)", copy: "Kopieren", copied: "Kopiert", connect: "Verbinden", repair: "Neu koppeln", close: "Schließen",
+    mirrorStep1: "1. Auf dem zweiten Gerät öffnen: QR-Code scannen oder den Link verschicken.",
+    mirrorStep2: "2. Dort erscheint ein Antwort-Code. Füge ihn hier ein:",
+    mirrorHint: "Die Verbindung läuft direkt zwischen den beiden Geräten, die Namen gehen über keinen Server. Nur zum Finden der Adresse wird ein öffentlicher STUN-Server gefragt. Nach einem Neuladen muss neu gekoppelt werden.",
+    mirrorPreparing: "Verbindung wird vorbereitet …", mirrorWaiting: "Warte auf den Antwort-Code des zweiten Geräts.",
+    mirrorConnecting: "Verbinde … (kann ein paar Sekunden dauern)", mirrorConnected: "✅ Verbunden – jedes Etikett erscheint live auf dem zweiten Gerät.",
+    mirrorClosed: "Verbindung getrennt – bitte neu koppeln.", mirrorExpired: "Der Code ist abgelaufen (5 Minuten). Klicke auf „Neu koppeln“.",
+    mirrorEach: "Nach jedem Druck neuen QR-Code erzeugen (der alte verfällt)", mirrorError: m => `Fehler: ${m}`, mirrorBadCode: "Das ist kein gültiger Antwort-Code.",
+    mirrorTimeout: "Keine Verbindung zustande gekommen. Prüfe, ob beide Geräte online sind, und koppele neu.",
+    clear: "Name und Hashtags leeren", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)",
+    sizeInfo: (l, w) => `Etikett ≈ ${l} × ${w} mm`,
+    sent: (sec, bytes) => `Gesendet in ${sec} s (${bytes} Bytes) – warte auf den Druck …`,
+    noBluetooth: "Web Bluetooth fehlt – bitte Chrome oder Edge über localhost/HTTPS nutzen.",
+    connecting: "Verbinde und drucke …",
+    printed: (a, b, n) => `Gedruckt. Senden ${a} s, gesamt ${b} s, ${n} Zeilen.`,
+    noPrinter: "Kein Drucker gewählt.", error: m => `Fehler: ${m}`,
+  },
+  en: {
+    langTitle: "Sprache / Language", themeTitle: "Toggle light / dark", themeAria: "Switch appearance",
+    titleLabel: "Title text", greetingLabel: "Intro line (optional)", greetingPh: "e.g. Hello, I'm",
+    maleTitle: "Male form", maleAria: "Man", femaleTitle: "Female form", femaleAria: "Woman",
+    dice1Title: "Random positive adjective", dice2Title: "Two random positive adjectives", dice3Title: "Three random positive adjectives",
+    backTitle: "Restore previous intro line", clearGreetingTitle: "Clear intro line",
+    nameLabel: "Name (large) – search also works by last name", namePh: "Type a name or pick from the list",
+    checkOffTitle: "Check off this person in the attendee list (without printing)",
+    firstOnly: "First<br>name only", firstOnlyTitle: "Print only the first word of the name (on/off)",
+    tagsPh: "#java #architecture #docs-as-code",
+    tagsHint: "Separated by spaces or commas. Each line stays its own line on the label. The <code>#</code> is added if missing.",
+    peopleTitle: "Attendee list", colLabel: "Column containing the name",
+    colAuto: "Automatic (Meetup format: column “Name”)", colSplit: "First name + last name (two columns)",
+    listInfoDefault: "Upload a CSV export from Meetup (or a text file with one name per line). The name field then suggests names while you type, and printed names get checked off. The list is kept in the browser.",
+    listInfo: (n, d) => `${n} attendees, ${d} printed – type in the name field to search.`,
+    noNames: "No names found – pick the column containing the name above.",
+    download: "⬇ Download CSV", downloadTitle: "Save the list as CSV with a “Printed” column", reset: "Reset checkmarks",
+    checksHint: "Checkmarks are only stored in this browser. To back them up or use another computer: download the list and upload the file above later – the checkmarks come back with it.",
+    csvHeader: "Name;Printed", yes: "Yes", no: "No", csvFile: "attendees",
+    print: "Print", lengthLabel: "Label length (mm, paper runs sideways)", autoLength: "Calculate length automatically from the content",
+    flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
+    openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
+    mirror: "📡 Connect a second device", mirrorOn: "📡 Second device connected", mirrorTitle: "Mirrors the label live to a second device (WebRTC)",
+    mirrorHeading: "Connect a second device (mirror mode)", copy: "Copy", copied: "Copied", connect: "Connect", repair: "Pair again", close: "Close",
+    mirrorStep1: "1. Open on the second device: scan the QR code or send the link.",
+    mirrorStep2: "2. An answer code appears there. Paste it here:",
+    mirrorHint: "The connection runs directly between the two devices; names do not go through any server. Only a public STUN server is asked to find the address. After a reload you have to pair again.",
+    mirrorPreparing: "Preparing the connection …", mirrorWaiting: "Waiting for the answer code from the second device.",
+    mirrorConnecting: "Connecting … (this can take a few seconds)", mirrorConnected: "✅ Connected – every label appears live on the second device.",
+    mirrorClosed: "Connection lost – please pair again.", mirrorExpired: "The code has expired (5 minutes). Click “Pair again”.",
+    mirrorEach: "Create a new QR code after each print (the old one expires)", mirrorError: m => `Error: ${m}`, mirrorBadCode: "That is not a valid answer code.",
+    mirrorTimeout: "No connection could be made. Check that both devices are online and pair again.",
+    clear: "Clear name and hashtags", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)",
+    sizeInfo: (l, w) => `Label ≈ ${l} × ${w} mm`,
+    sent: (sec, bytes) => `Sent in ${sec} s (${bytes} bytes) – waiting for the print …`,
+    noBluetooth: "Web Bluetooth is missing – please use Chrome or Edge via localhost/HTTPS.",
+    connecting: "Connecting and printing …",
+    printed: (a, b, n) => `Printed. Sending ${a} s, total ${b} s, ${n} rows.`,
+    noPrinter: "No printer selected.", error: m => `Error: ${m}`,
+  },
+};
+const LANG_KEY = "meetupapp.lang";
+let lang = (navigator.language || "de").toLowerCase().startsWith("de") ? "de" : "en";
+try { const saved = localStorage.getItem(LANG_KEY); if (saved === "de" || saved === "en") lang = saved; } catch {}
+const t = (key, ...args) => { const v = T[lang][key]; return typeof v === "function" ? v(...args) : v; };
+
+function applyI18n() {
+  document.documentElement.lang = lang;
+  for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll("[data-i18n-html]")) el.innerHTML = t(el.dataset.i18nHtml);
+  for (const el of document.querySelectorAll("[data-i18n-ph]")) el.placeholder = t(el.dataset.i18nPh);
+  for (const el of document.querySelectorAll("[data-i18n-title]")) el.title = t(el.dataset.i18nTitle);
+  for (const el of document.querySelectorAll("[data-i18n-aria]")) el.setAttribute("aria-label", t(el.dataset.i18nAria));
+  $("lang").textContent = lang === "de" ? "EN" : "DE";   // zeigt die Sprache, zu der ein Klick wechselt
+  // Männlich/weiblich gibt es nur im Deutschen (Adjektivendungen); englische Adjektive bleiben gleich
+  $("genderM").hidden = $("genderF").hidden = lang !== "de";
+  if (typeof refreshColumnOptions === "function") refreshColumnOptions();
+  if (typeof updateMirrorUi === "function") updateMirrorUi();
+  if (typeof renderList === "function") renderList();
+}
 const canvas = $("canvas");                       // Vorschau (liegend)
 const printSource = document.createElement("canvas"); // Druckbild (gedreht)
 
@@ -193,8 +381,11 @@ function fitName(ctx, text, maxWidth, maxSize = 84, minSize = 28, maxLines = 3) 
   return { size: minSize, lines: wrapWords(ctx, text, maxWidth) };
 }
 
+// Jede Zeile der Eingabe bleibt eine eigene Zeile auf dem Etikett; zu lange Zeilen brechen dort selbst um.
 function parseTags(raw) {
-  return raw.split(/[\s,]+/).filter(Boolean).map(t => (t.startsWith("#") ? t : "#" + t));
+  return raw.split(/\r?\n/)
+    .map(line => line.split(/[\s,]+/).filter(Boolean).map(t => (t.startsWith("#") ? t : "#" + t)))
+    .filter(line => line.length);
 }
 
 // Aus "Dr. Anna Maria Müller" wird "Anna"; bei "Müller, Anna" wird "Anna".
@@ -221,7 +412,7 @@ function drawLabel() {
   const probe = document.createElement("canvas").getContext("2d");
   const TITLE_INSET = 14;   // Titel etwas weiter vom oberen Rand weg
   const titleSize = 26, titleLineH = 32, greetSize = 36, greetLineH = 44;
-  const tagSize = 30, chipPadX = 6, chipH = 38, chipGap = 14;
+  const tagSize = 30, chipPadX = 6, chipH = 33, chipGap = 14, tagRowGap = 3;   // tagRowGap: Abstand zwischen zwei Hashtag-Zeilen (chipGap gilt waagerecht)
 
   // Misst Titel, Name und Hashtags für eine gegebene Etikettenlänge (in Punkten).
   function measure(lengthPx) {
@@ -236,20 +427,22 @@ function drawLabel() {
 
     probe.font = `${tagSize}px ${FONT_CODE}`;
     const rows = [];
-    let row = [], rowW = 0;
-    for (const tag of tags) {
-      const w = Math.min(inner, Math.ceil(probe.measureText(tag).width) + 2 * chipPadX);
-      if (row.length && rowW + chipGap + w > inner) { rows.push(row); row = []; rowW = 0; }
-      row.push({ tag, w });
-      rowW += (row.length > 1 ? chipGap : 0) + w;
+    for (const line of tags) {   // jede Eingabezeile beginnt eine neue Etikettzeile
+      let row = [], rowW = 0;
+      for (const tag of line) {
+        const w = Math.min(inner, Math.ceil(probe.measureText(tag).width) + 2 * chipPadX);
+        if (row.length && rowW + chipGap + w > inner) { rows.push(row); row = []; rowW = 0; }
+        row.push({ tag, w });
+        rowW += (row.length > 1 ? chipGap : 0) + w;
+      }
+      if (row.length) rows.push(row);
     }
-    if (row.length) rows.push(row);
     const rowsWidth = Math.max(0, ...rows.map(r => r.reduce((s, c) => s + c.w, 0) + chipGap * (r.length - 1)));
 
     // Name so groß wie möglich, solange alles in die 384 px Höhe passt.
     const titleHeight = titleLines.length ? TITLE_INSET + titleLines.length * titleLineH + 8 : 0;
     const greetHeight = greetLines.length * greetLineH;
-    const fixedHeight = 2 * MARGIN + titleHeight + greetHeight + rows.length * (chipH + chipGap);
+    const fixedHeight = 2 * MARGIN + titleHeight + greetHeight + rows.length * (chipH + tagRowGap);
     let fit = { size: 0, lines: [] };
     // Bevorzugt eine Zeile (lange Namen werden dafür kleiner), erst unter 48 px wird umbrochen.
     if (name) {
@@ -264,7 +457,7 @@ function drawLabel() {
     probe.font = `${fit.size}px ${FONT_SANS}`;
     const nameWidth = Math.max(0, ...fit.lines.map(l => probe.measureText(l).width));
     const nameLineH = Math.round(fit.size * 1.12);
-    const bodyHeight = greetHeight + rows.length * (chipH + chipGap) + fit.lines.length * nameLineH + (fit.lines.length ? 14 : 0);
+    const bodyHeight = greetHeight + rows.length * (chipH + tagRowGap) + fit.lines.length * nameLineH + (fit.lines.length ? 14 : 0);
     return { titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight,
              usedWidth: Math.max(titleWidth, greetWidth, rowsWidth, nameWidth) };
   }
@@ -285,68 +478,77 @@ function drawLabel() {
   $("length").disabled = $("autoLength").checked;
   const { titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight } = m;
 
-  const layout = document.createElement("canvas");
-  layout.width = lengthPx;
-  layout.height = WIDTH;
-  const lctx = layout.getContext("2d");
-  lctx.fillStyle = "#fff";
-  lctx.fillRect(0, 0, lengthPx, WIDTH);
-  lctx.fillStyle = "#000";
-  lctx.textAlign = "center";
-  lctx.textBaseline = "middle";
+  // Zeichnet das liegende Etikett; scale > 1 ergibt dasselbe Bild in höherer Auflösung (glatte Vorschau).
+  function paint(scale) {
+    const layout = document.createElement("canvas");
+    layout.width = lengthPx * scale;
+    layout.height = WIDTH * scale;
+    const lctx = layout.getContext("2d");
+    lctx.scale(scale, scale);
+    lctx.fillStyle = "#fff";
+    lctx.fillRect(0, 0, lengthPx, WIDTH);
+    lctx.fillStyle = "#000";
+    lctx.textAlign = "center";
+    lctx.textBaseline = "middle";
 
-  // Der Titel (Meetup-Name) steht immer ganz oben; der Rest wird im verbleibenden Platz zentriert.
-  let y = MARGIN + (titleLines.length ? TITLE_INSET : 0);
-  lctx.font = `bold ${titleSize}px ${FONT_TEXT}`;
-  for (const line of titleLines) {
-    lctx.fillText(line, lengthPx / 2, y + titleLineH / 2);
-    y += titleLineH;
-  }
-  y = MARGIN + titleHeight;
-  y += Math.max(0, (WIDTH - MARGIN - y - bodyHeight) / 2);
-
-  lctx.font = `${greetSize}px ${FONT_TEXT}`;
-  for (const line of greetLines) {
-    lctx.fillText(line, lengthPx / 2, y + greetLineH / 2);
-    y += greetLineH;
-  }
-
-  lctx.font = `${fit.size}px ${FONT_SANS}`;
-  for (const line of fit.lines) {
-    lctx.fillText(line, lengthPx / 2, y + nameLineH / 2);
-    y += nameLineH;
-  }
-  if (fit.lines.length) y += 14;
-
-  lctx.font = `${tagSize}px ${FONT_CODE}`;
-  for (const r of rows) {
-    const total = r.reduce((s, c) => s + c.w, 0) + chipGap * (r.length - 1);
-    let x = (lengthPx - total) / 2;
-    for (const chip of r) {
-      lctx.fillText(chip.tag, x + chip.w / 2, y + chipH / 2 + 1, chip.w - 2 * chipPadX / 2);
-      x += chip.w + chipGap;
+    // Der Titel (Meetup-Name) steht immer ganz oben; der Rest wird im verbleibenden Platz zentriert.
+    let y = MARGIN + (titleLines.length ? TITLE_INSET : 0);
+    lctx.font = `bold ${titleSize}px ${FONT_TEXT}`;
+    for (const line of titleLines) {
+      lctx.fillText(line, lengthPx / 2, y + titleLineH / 2);
+      y += titleLineH;
     }
-    y += chipH + chipGap;
+    y = MARGIN + titleHeight;
+    y += Math.max(0, (WIDTH - MARGIN - y - bodyHeight) / 2);
+
+    lctx.font = `${greetSize}px ${FONT_TEXT}`;
+    for (const line of greetLines) {
+      lctx.fillText(line, lengthPx / 2, y + greetLineH / 2);
+      y += greetLineH;
+    }
+
+    lctx.font = `${fit.size}px ${FONT_SANS}`;
+    for (const line of fit.lines) {
+      lctx.fillText(line, lengthPx / 2, y + nameLineH / 2);
+      y += nameLineH;
+    }
+    if (fit.lines.length) y += 14;
+
+    lctx.font = `${tagSize}px ${FONT_CODE}`;
+    for (const r of rows) {
+      const total = r.reduce((s, c) => s + c.w, 0) + chipGap * (r.length - 1);
+      let x = (lengthPx - total) / 2;
+      for (const chip of r) {
+        lctx.fillText(chip.tag, x + chip.w / 2, y + chipH / 2 + 1, chip.w - 2 * chipPadX / 2);
+        x += chip.w + chipGap;
+      }
+      y += chipH + tagRowGap;
+    }
+    return layout;
   }
 
-  // Vorschau: liegend, so wie man das Etikett liest.
-  canvas.width = lengthPx;
-  canvas.height = WIDTH;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(layout, 0, 0);
-  toOneBit(ctx);
+  // Vorschau: liegend, in 3-facher Auflösung und glatt (das gedruckte 1-Bit-Bild unten ist dasselbe Layout in Punkten).
+  const hi = paint(PREVIEW_SCALE);
+  canvas.width = hi.width;
+  canvas.height = hi.height;
+  canvas.getContext("2d").drawImage(hi, 0, 0);
+  const layout = paint(zoom);   // dasselbe Etikett in Druckgröße; bei Zoom < 1 neu gezeichnet statt verkleinert, damit die Schrift scharf bleibt
 
-  // Druckbild: um 90° gedreht (Layout-x läuft entlang des Papiers, nach unten).
+  // Druckbild: um 90° gedreht (Layout-x läuft entlang des Papiers, nach unten). Bei Zoom < 1 sitzt das kleinere
+  // Etikett mittig auf dem 48 mm breiten Papier.
+  const printLength = layout.width, printHeight = layout.height;
   printSource.width = WIDTH;
-  printSource.height = lengthPx;
+  printSource.height = printLength;
   const pctx = printSource.getContext("2d");
   pctx.fillStyle = "#fff";
-  pctx.fillRect(0, 0, WIDTH, lengthPx);
-  if ($("flip").checked) { pctx.translate(0, lengthPx); pctx.rotate(-Math.PI / 2); }
-  else { pctx.translate(WIDTH, 0); pctx.rotate(Math.PI / 2); }
-  pctx.drawImage(canvas, 0, 0);
+  pctx.fillRect(0, 0, WIDTH, printLength);
+  if ($("flip").checked) { pctx.translate(WIDTH / 2 - printHeight / 2, printLength); pctx.rotate(-Math.PI / 2); }
+  else { pctx.translate(WIDTH / 2 + printHeight / 2, 0); pctx.rotate(Math.PI / 2); }
+  pctx.drawImage(layout, 0, 0);
   pctx.setTransform(1, 0, 0, 1, 0, 0);
   toOneBit(pctx);
+  // Länge zur Abschätzung unter der Vorschau (gedruckte Größe, mit Zoom)
+  $("sizeInfo").textContent = t("sizeInfo", Math.round(printLength / DOTS_PER_MM), Math.round(printHeight / DOTS_PER_MM));
 }
 
 // Der Drucker kennt nur Schwarz/Weiß: harter Schwellwert, damit die Vorschau genau zeigt, was gedruckt wird.
@@ -367,16 +569,56 @@ const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length"];
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
-    const state = { gender, rollCount };
+    const state = { gender, rollCount, zoom };
     for (const id of TEXT_FIELDS) state[id] = $(id).value;
     for (const id of CHECK_FIELDS) state[id] = $(id).checked;
     localStorage.setItem(FIELDS_KEY, JSON.stringify(state));
   } catch {}
 }
 
+// Live-Ansicht (view.html in einem zweiten Fenster, z. B. auf dem anderen Monitor): jedes neue Etikett als PNG senden
+let liveChannel = null;
+try { liveChannel = new BroadcastChannel("meetup-label"); } catch {}
+function publishLabel() {
+  if (!liveChannel) return;
+  const image = canvas.toDataURL("image/png");
+  liveChannel.postMessage({ type: "label", image });
+  try { localStorage.setItem("meetupapp.live", image); } catch {}
+  sendMirror();
+}
+
+// Spiegelmodus (WebRTC): das aktuelle Etikett an das gekoppelte zweite Gerät schicken (gebündelt, damit beim Tippen nicht jede Taste ein Bild sendet)
+let mirror = null;
+let mirrorTimer = null;
+function sendMirror(now = false) {
+  if (!mirror?.open) return;
+  clearTimeout(mirrorTimer);
+  mirrorTimer = setTimeout(() => {
+    if (mirror?.open && mirror.channel.bufferedAmount < 2e6) mirror.send({ type: "label", image: canvas.toDataURL("image/png") });
+  }, now ? 0 : 120);
+}
+liveChannel && (liveChannel.onmessage = event => { if (event.data?.type === "hello") publishLabel(); });
+
+// Winzige Zacken am linken und rechten Rand wie bei einem abgerissenen Etikett (clip-path in angezeigten Pixeln)
+function sawEdges(w, h) {
+  const tooth = 5, depth = 2.5;
+  const n = Math.max(2, Math.round(h / tooth)), step = h / n;
+  const pts = [`${depth}px 0`, `${w - depth}px 0`];
+  for (let i = 0; i < n; i++) pts.push(`${w}px ${(i + 0.5) * step}px`, `${w - depth}px ${(i + 1) * step}px`);
+  pts.push(`${depth}px ${h}px`);
+  for (let i = n - 1; i >= 0; i--) pts.push(`0px ${(i + 0.5) * step}px`, `${depth}px ${i * step}px`);
+  return `polygon(${pts.join(",")})`;
+}
+function applySaw() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (w && h) canvas.style.clipPath = sawEdges(w, h);
+}
+new ResizeObserver(applySaw).observe(canvas);   // Zacken neu berechnen, wenn sich die angezeigte Größe ändert
+
 function render() {
   drawLabel();
   saveFields();
+  publishLabel();
 }
 
 // ---------- Cat-Printer-Protokoll (portiert aus ble_print.py) ----------
@@ -456,7 +698,7 @@ async function printCanvas() {
     await sleep(mode.delay);
   }
   const sent = (performance.now() - started) / 1000;
-  status(`Gesendet in ${sent.toFixed(1)} s (${data.length} Bytes) – warte auf den Druck …`);
+  status(t("sent", sent.toFixed(1), data.length));
   // Der Drucker meldet nicht, wann er fertig ist: geschätzte Druckdauer abwarten.
   const remaining = started + (printSource.height * mode.rowSeconds + mode.feedSeconds) * 1000 - performance.now();
   if (remaining > 0) await sleep(remaining);
@@ -468,20 +710,21 @@ const status = (text, error = false) => { $("status").textContent = text; $("sta
 
 $("form").addEventListener("submit", async event => {
   event.preventDefault();
-  if (!navigator.bluetooth) return status("Web Bluetooth fehlt – bitte Chrome oder Edge über localhost/HTTPS nutzen.", true);
+  if (!navigator.bluetooth) return status(t("noBluetooth"), true);
   $("print").disabled = true;
   try {
-    status("Verbinde und drucke …");
+    status(t("connecting"));
     const result = await printCanvas();
     const printed = matchPerson();
     if (printed) { printed.done = true; save(); renderList(); }
     setFirstOnly(true);   // nächstes Etikett wieder nur mit Vornamen
     render();
-    status(`Gedruckt. Senden ${result.sent.toFixed(1)} s, gesamt ${result.total.toFixed(1)} s, ${result.rows} Zeilen.`);
+    status(t("printed", result.sent.toFixed(1), result.total.toFixed(1), result.rows));
+    if (mirror && $("mirrorEach").checked) { $("mirrorBox").hidden = false; startPairing(); }   // nächster Gast scannt einen frischen Code, der alte verfällt (nur, wenn der Spiegelmodus in dieser Sitzung genutzt wird)
     if ($("rerollAfterPrint").checked && $("greeting").value.trim()) rollGreeting(rollCount);   // nur wenn die Zwischenzeile benutzt wird
   } catch (error) {
-    if (error.name === "NotFoundError") status("Kein Drucker gewählt.", true);
-    else status(`Fehler: ${error.message}`, true);
+    if (error.name === "NotFoundError") status(t("noPrinter"), true);
+    else status(t("error", error.message), true);
   } finally {
     $("print").disabled = false;
   }
@@ -526,25 +769,62 @@ function parseCsv(text) {
   return rows;
 }
 
-function extractNames(text) {
-  const rows = parseCsv(text);
+// Namen aus den CSV-Zeilen. choice: "auto" (Meetup-Format: Spalte "Name"), "split" (Vorname + Nachname) oder "col:<Nr>" (gewählte Spalte)
+function extractNamesFromRows(rows, choice = "auto") {
   if (!rows.length) return [];
   const header = rows[0].map(h => h.trim().toLowerCase());
   const find = re => header.findIndex(h => re.test(h));
-  let names;
-  const nameCol = find(/^(name|member name|mitgliedsname|teilnehmer|vollständiger name|full name)$/);
   const firstCol = find(/^(vorname|first name|first)$/);
-  const lastCol = find(/^(nachname|last name|last|familienname)$/);
-  if (nameCol >= 0) names = rows.slice(1).map(r => r[nameCol]);
-  else if (firstCol >= 0 && lastCol >= 0) names = rows.slice(1).map(r => `${r[firstCol] || ""} ${r[lastCol] || ""}`);
-  else if (rows[0].length === 1) names = rows.map(r => r[0]);       // reine Namensliste
+  const lastCol = find(/^(nachname|last name|last|familienname|surname)$/);
+  let names;
+  if (choice.startsWith("col:") && rows[0].length > 1) names = rows.slice(1).map(r => r[Number(choice.slice(4))]);
+  else if (choice === "split" && firstCol >= 0 && lastCol >= 0) names = rows.slice(1).map(r => `${r[firstCol] || ""} ${r[lastCol] || ""}`);
   else {
-    const col = find(/name/);                                       // irgendeine Spalte mit "name"
-    names = col >= 0 ? rows.slice(1).map(r => r[col]) : rows.map(r => r[0]);
+    const nameCol = find(/^(name|member name|mitgliedsname|teilnehmer|vollständiger name|full name)$/);
+    if (nameCol >= 0) names = rows.slice(1).map(r => r[nameCol]);
+    else if (firstCol >= 0 && lastCol >= 0) names = rows.slice(1).map(r => `${r[firstCol] || ""} ${r[lastCol] || ""}`);
+    else if (rows[0].length === 1) names = rows.map(r => r[0]);       // reine Namensliste
+    else {
+      const col = find(/name/);                                       // irgendeine Spalte mit "name"
+      names = col >= 0 ? rows.slice(1).map(r => r[col]) : rows.map(r => r[0]);
+    }
   }
   const seen = new Set();
   return names.map(n => (n || "").replace(/\s+/g, " ").trim())
     .filter(n => n && !seen.has(n.toLowerCase()) && seen.add(n.toLowerCase()));
+}
+
+let csvRows = null;              // zuletzt hochgeladene Datei (für die Spaltenauswahl)
+let doneFromFile = new Set();    // Haken aus einer früher heruntergeladenen Liste
+const NAMECOL_KEY = "meetupapp.nameCol";   // gemerkt wird der Spaltenname (oder "auto"/"split")
+
+function refreshColumnOptions() {
+  const headers = csvRows && csvRows[0] && csvRows[0].length > 1 ? csvRows[0].map(h => h.trim()) : [];
+  $("colConfig").hidden = headers.length === 0;
+  if (!headers.length) return;
+  const lower = headers.map(h => h.toLowerCase());
+  const hasSplit = lower.some(h => /^(vorname|first name|first)$/.test(h)) && lower.some(h => /^(nachname|last name|last|familienname|surname)$/.test(h));
+  const option = (value, label) => Object.assign(document.createElement("option"), { value, textContent: label });
+  const previous = $("nameCol").value;
+  $("nameCol").replaceChildren(
+    option("auto", t("colAuto")),
+    ...(hasSplit ? [option("split", t("colSplit"))] : []),
+    ...headers.map((h, i) => option(`col:${i}`, h || `(${i + 1})`)));
+  let saved = "auto";
+  try { saved = localStorage.getItem(NAMECOL_KEY) || "auto"; } catch {}
+  const byHeader = headers.indexOf(saved);
+  const wanted = [...$("nameCol").options].some(o => o.value === previous) ? previous
+    : byHeader >= 0 ? `col:${byHeader}` : saved === "split" && hasSplit ? "split" : "auto";
+  $("nameCol").value = wanted;
+}
+
+// Namen aus der geladenen Datei übernehmen; bereits gesetzte Haken bleiben erhalten
+function applyNames() {
+  const names = extractNamesFromRows(csvRows, $("nameCol").value || "auto");
+  if (!names.length) { $("listInfo").textContent = t("noNames"); return; }
+  const done = new Set([...people.filter(p => p.done).map(p => p.name), ...doneFromFile]);
+  people = names.map(name => ({ name, done: done.has(name) }));
+  save(); renderList();
 }
 
 // Namen, die in einer heruntergeladenen Liste als gedruckt markiert sind (Spalten "Name" und "Gedruckt")
@@ -552,18 +832,18 @@ function doneNamesFromCsv(text) {
   const rows = parseCsv(text);
   if (rows.length < 2) return [];
   const header = rows[0].map(h => h.trim().toLowerCase());
-  const nameCol = header.indexOf("name"), doneCol = header.indexOf("gedruckt");
+  const nameCol = header.indexOf("name"), doneCol = header.findIndex(h => h === "gedruckt" || h === "printed");
   if (nameCol < 0 || doneCol < 0) return [];
-  return rows.slice(1).filter(r => /^(ja|x|1|true|✓)$/i.test((r[doneCol] || "").trim())).map(r => (r[nameCol] || "").replace(/\s+/g, " ").trim());
+  return rows.slice(1).filter(r => /^(ja|yes|x|1|true|✓)$/i.test((r[doneCol] || "").trim())).map(r => (r[nameCol] || "").replace(/\s+/g, " ").trim());
 }
 
 function downloadList() {
   const quote = v => `"${String(v).replace(/"/g, '""')}"`;
-  const lines = ["Name;Gedruckt", ...people.map(p => `${quote(p.name)};${p.done ? "Ja" : "Nein"}`)];
+  const lines = [t("csvHeader"), ...people.map(p => `${quote(p.name)};${p.done ? t("yes") : t("no")}`)];
   const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `teilnehmer-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `${t("csvFile")}-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
 }
@@ -608,23 +888,25 @@ function renderList() {
   }));
   $("checklist").hidden = !people.length;
   updateCheckOff();
-  if (people.length) {
-    const done = people.filter(p => p.done).length;
-    $("listInfo").textContent = `${people.length} Teilnehmer, ${done} gedruckt – im Namensfeld tippen zum Suchen.`;
-  }
+  const done = people.filter(p => p.done).length;
+  $("listInfo").textContent = people.length ? t("listInfo", people.length, done) : t("listInfoDefault");
 }
 
 $("file").addEventListener("change", async event => {
   const file = event.target.files[0];
   if (!file) return;
   const text = await file.text();
-  const names = extractNames(text);
-  if (!names.length) { $("listInfo").textContent = "Keine Namen gefunden – hat die Datei eine Spalte „Name“?"; return; }
-  const done = new Set(people.filter(p => p.done).map(p => p.name));
-  for (const name of doneNamesFromCsv(text)) done.add(name);   // Haken aus einer früher heruntergeladenen Liste
-  people = names.map(name => ({ name, done: done.has(name) }));
-  save(); renderList();
+  csvRows = parseCsv(text);
+  doneFromFile = new Set(doneNamesFromCsv(text));
+  refreshColumnOptions();
+  applyNames();
 });
+$("nameCol").addEventListener("change", () => {
+  const value = $("nameCol").value;
+  try { localStorage.setItem(NAMECOL_KEY, value.startsWith("col:") ? csvRows[0][Number(value.slice(4))].trim() : value); } catch {}
+  applyNames();
+});
+$("openView").addEventListener("click", () => window.open("view.html", "meetup-view", "popup,width=1000,height=700"));
 $("checkOff").addEventListener("click", () => {
   const person = matchPerson();
   if (!person) return;
@@ -658,8 +940,8 @@ let rollCount = 1;     // letzter Modus (1-3 Adjektive); "Nach jedem Druck neu w
 let gender = null;     // "m", "f" oder null (neutral: "(r)" bzw. "Der/Die")
 
 // Adjektiv in der passenden Form: "Großartiger" / "Großartige" / "Großartige(r)"
-const adjective = a => (gender === "m" ? a + "r" : gender === "f" ? a : a + "(r)");
-const article = () => (gender === "m" ? "Der" : gender === "f" ? "Die" : "Der/Die");
+const adjective = a => (lang === "en" ? a : gender === "m" ? a + "r" : gender === "f" ? a : a + "(r)");
+const article = () => (lang === "en" ? "The" : gender === "m" ? "Der" : gender === "f" ? "Die" : "Der/Die");
 
 // Die gewürfelten Bestandteile werden gemerkt, damit die Geschlechts-Buttons den Text
 // nur umformen (er/sie) und nicht neu würfeln.
@@ -703,7 +985,7 @@ function rollGreeting(count = rollCount) {
   do {
     const words = [];
     while (words.length < count) {   // verschiedene Adjektive
-      const a = pick(ADJECTIVES);
+      const a = pick(lang === "en" ? ADJECTIVES_EN : ADJECTIVES);
       if (!words.some(w => sameWord(w, a))) words.push(a);
     }
     roll = count > 1 ? { kind: "list", words } : { kind: Math.random() < 0.5 ? "adj" : "article", words };
@@ -712,6 +994,10 @@ function rollGreeting(count = rollCount) {
 }
 
 // Von Hand geschriebenen Text umformen: "(r)" -> "r"/"", "Der/Die" -> "Der"/"Die"
+const ADJECTIVES_EN = ["Awesome", "Brilliant", "Fantastic", "Great", "Wonderful", "Amazing", "Stellar", "Marvelous", "Legendary",
+  "Outstanding", "Incredible", "Remarkable", "Inspiring", "Creative", "Clever", "Brave", "Radiant", "Splendid", "Superb", "Magnificent",
+  "Phenomenal", "Charming", "Dazzling", "Excellent", "Exceptional", "Fabulous", "Fearless", "Genius", "Glorious", "Heroic",
+  "Impressive", "Lovely", "Mighty", "Terrific", "Unstoppable", "Visionary", "Witty", "Cool", "Epic", "Sharp"];
 const ADJ_BASE = new Set(ADJECTIVES.map(a => a.toLowerCase()));
 // Grundform ("Großartige") eines Adjektivs aus "Großartige", "Großartiger" oder "Großartige(r)"; sonst null
 function adjectiveBase(tok) {
@@ -788,6 +1074,7 @@ function restoreFields() {
     $("genderF").setAttribute("aria-pressed", String(gender === "f"));
   }
   if ([1, 2, 3].includes(state.rollCount)) rollCount = state.rollCount;
+  if ([1, 0.75, 0.5].includes(state.zoom)) zoom = state.zoom;
 }
 restoreFields();
 
@@ -798,6 +1085,7 @@ function applyTheme(theme) {   // "light" | "dark" | null (System)
   if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
   const dark = theme ? theme === "dark" : systemDark();
   $("theme").textContent = dark ? "☀️" : "🌙";
+  if (typeof syncAccentInput === "function") syncAccentInput();
 }
 try { applyTheme(localStorage.getItem(THEME_KEY)); } catch { applyTheme(null); }
 $("theme").addEventListener("click", () => {
@@ -805,7 +1093,106 @@ $("theme").addEventListener("click", () => {
   applyTheme(next);
   try { localStorage.setItem(THEME_KEY, next); } catch {}
 });
-load(); renderList();
+function showZoom() { for (const b of document.querySelectorAll("#zoom [data-zoom]")) b.setAttribute("aria-pressed", String(Number(b.dataset.zoom) === zoom)); }
+for (const b of document.querySelectorAll("#zoom [data-zoom]")) b.addEventListener("click", () => { zoom = Number(b.dataset.zoom); showZoom(); render(); });
+showZoom();
+// Hauptfarbe: überschreibt --accent (und die Schriftfarbe darauf); ohne Wahl gelten die Standardfarben von hell/dunkel
+const ACCENT_KEY = "meetupapp.accent";
+function readableOn(hex) {   // dunkle oder helle Schrift, je nach Helligkeit der Farbe
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? "#1c1917" : "#ffffff";
+}
+function syncAccentInput() {
+  const current = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  if (/^#[0-9a-f]{6}$/i.test(current)) $("accent").value = current;
+}
+function applyAccent(color) {
+  const root = document.documentElement;
+  if (color) { root.style.setProperty("--accent", color); root.style.setProperty("--on-accent", readableOn(color)); }
+  else { root.style.removeProperty("--accent"); root.style.removeProperty("--on-accent"); }
+  syncAccentInput();
+}
+try { const saved = localStorage.getItem(ACCENT_KEY); if (/^#[0-9a-f]{6}$/i.test(saved || "")) applyAccent(saved); else syncAccentInput(); } catch { syncAccentInput(); }
+$("accent").addEventListener("input", () => { applyAccent($("accent").value); try { localStorage.setItem(ACCENT_KEY, $("accent").value); } catch {} });
+$("accentReset").addEventListener("click", () => { applyAccent(null); try { localStorage.removeItem(ACCENT_KEY); } catch {} });
+
+// ---------- Spiegelmodus: Kopplung ----------
+let mirrorState = { key: "mirrorPreparing" };
+function setMirrorState(key, arg) { mirrorState = { key, arg }; updateMirrorUi(); }
+function updateMirrorUi() {
+  const on = Boolean(mirror?.open);
+  $("mirrorBtn").setAttribute("aria-pressed", String(on));
+  $("mirrorBtn").title = $("mirrorBtn").ariaLabel = on ? t("mirrorOn") : t("mirror");
+  $("mirrorState").textContent = t(mirrorState.key, mirrorState.arg);
+  $("mirrorSteps").hidden = mirrorState.key === "mirrorConnected";   // verbunden: Kopplung ausblenden
+}
+const answerFrom = text => (text.match(/(?:^|[#?&=\s])([zr]\.[A-Za-z0-9_-]{20,})/) || [])[1];
+
+const PAIR_TTL_MS = 5 * 60 * 1000;   // ein Code gilt 5 Minuten; danach wird das Angebot geschlossen, eine späte Antwort bringt nichts mehr
+let pairTimer = null;
+async function startPairing() {
+  clearTimeout(pairTimer);
+  mirror?.close(); mirror = null;   // der bisherige Code (und eine bestehende Verbindung) wird ungültig
+  $("mirrorAnswer").value = ""; $("mirrorQr").innerHTML = ""; $("mirrorLink").value = "";
+  setMirrorState("mirrorPreparing");
+  try {
+    mirror = await Mirror.host({
+      onOpen: () => { clearTimeout(pairTimer); setMirrorState("mirrorConnected"); sendMirror(true); },   // einmal benutzt: der Code ist verbraucht
+      onClose: () => { if (mirrorState.key !== "mirrorPreparing") setMirrorState("mirrorClosed"); },
+    });
+  } catch (error) { setMirrorState("mirrorError", error.message); return; }
+  const link = new URL("view.html", location.href);
+  link.hash = "o=" + mirror.code;
+  $("mirrorLink").value = link.href;
+  try { $("mirrorQr").innerHTML = Mirror.qrSvg(link.href); } catch { /* Link zu lang für einen QR-Code: der Link bleibt kopierbar */ }
+  setMirrorState("mirrorWaiting");
+  const mine = mirror;
+  pairTimer = setTimeout(() => {   // Verfall, solange noch niemand verbunden ist
+    if (mirror === mine && !mine.open) { mine.close(); mirror = null; $("mirrorQr").innerHTML = ""; $("mirrorLink").value = ""; setMirrorState("mirrorExpired"); }
+  }, PAIR_TTL_MS);
+}
+
+$("mirrorBtn").addEventListener("click", () => {
+  $("mirrorBox").hidden = false;
+  if (!mirror) startPairing(); else updateMirrorUi();
+});
+$("mirrorEach").checked = (() => { try { return localStorage.getItem("meetupapp.mirrorEach") !== "0"; } catch { return true; } })();   // Standard: an
+$("mirrorEach").addEventListener("change", () => { try { localStorage.setItem("meetupapp.mirrorEach", $("mirrorEach").checked ? "1" : "0"); } catch {} });
+$("mirrorClose").addEventListener("click", () => { $("mirrorBox").hidden = true; });
+$("mirrorReset").addEventListener("click", startPairing);
+$("mirrorCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("mirrorLink").value); } catch { $("mirrorLink").select(); document.execCommand?.("copy"); }
+  $("mirrorCopy").textContent = t("copied"); setTimeout(() => { $("mirrorCopy").textContent = t("copy"); }, 1500);
+});
+$("mirrorConnect").addEventListener("click", async () => {
+  const code = answerFrom($("mirrorAnswer").value);
+  if (!code || !mirror) { setMirrorState("mirrorError", t("mirrorBadCode")); return; }
+  setMirrorState("mirrorConnecting");
+  try { await mirror.accept(code); } catch { setMirrorState("mirrorError", t("mirrorBadCode")); return; }
+  setTimeout(() => { if (mirror && !mirror.open && mirrorState.key === "mirrorConnecting") setMirrorState("mirrorError", t("mirrorTimeout")); }, 20000);
+});
+
+// QR-Code zum Repository (vorab erzeugt, ECC M); erscheint beim Klick auf den Titel, Klick oder Esc schließt ihn
+const REPO_QR = ["111111100100011101010111001111111", "100000100011011110101001101000001", "101110100001010000101111001011101", "101110100001011111111111001011101", "101110100111111000111000101011101", "100000101000111111010000001000001", "111111101010101010101010101111111", "000000000001101111100111000000000", "100101101100111000000111010100000", "110111001010111011101100111100011", "111001111001011000111000101110111", "101011010001010110100110011011001", "100101101010001110101011011101011", "010111011110001101101000101010111", "011100100100111111010101111110010", "101000011000111011001101001000010", "010100100101000101001110101010010", "011010000010100011100001110101010", "100111100100001011000100101000111", "000110000101010100011011110100000", "001100101100110101011001010000010", "011011001011100101010100111000111", "111000110101111011110100001100001", "010110001101101100111110000011011", "101100100110111011001100111110010", "000000001011000001110110100011011", "111111100111101001101010101011110", "100000101001100111111110100010001", "101110100110100000101000111111011", "101110101010000110110011001010010", "101110100100111110011100000011101", "100000100100010001011101110000000", "111111101011100110010100111011010"];
+function drawRepoQr() {
+  const n = REPO_QR.length, quiet = 4, size = n + 2 * quiet, scale = 8;
+  const c = $("qrcanvas");
+  c.width = c.height = size * scale;
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = "#000";
+  REPO_QR.forEach((row, y) => [...row].forEach((bit, x) => { if (bit === "1") g.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale); }));
+}
+$("logo").addEventListener("click", () => { drawRepoQr(); $("qrbox").hidden = false; });
+$("qrbox").addEventListener("click", () => { $("qrbox").hidden = true; });
+addEventListener("keydown", e => { if (e.key === "Escape") { $("qrbox").hidden = true; $("mirrorBox").hidden = true; } });
+$("lang").addEventListener("click", () => {
+  lang = lang === "de" ? "en" : "de";
+  try { localStorage.setItem(LANG_KEY, lang); } catch {}
+  applyI18n();
+  render();
+});
+load(); applyI18n();
 render();
 document.fonts?.ready.then(render);
 </script>
