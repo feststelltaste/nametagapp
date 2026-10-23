@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -47,7 +47,7 @@
 <div id="lostNote"></div>
 <div id="stage">
   <div id="shadow"><img id="tag" alt="Namensschild"></div>
-  <div id="wait"><b>Noch kein Namensschild</b>Öffne den Editor im selben Browser (gleiche Adresse). Sobald dort ein Etikett erscheint, siehst du es hier live.</div>
+  <div id="wait"><b>No name tag yet</b>Open the editor in the same browser (same address). As soon as a label appears there, you will see it here live.</div>
 </div>
 
 <script src="vendor/qrcode.js"></script>
@@ -106,7 +106,7 @@ const TEXT = {
         copy: "Copy", copied: "Copied", share: "Share", hint: "The label then appears here automatically. Keep this page open.",
         connected: "Connected", lost: "Connection lost. Open the link from the editor again.", bad: "This link is invalid or expired. Create a new one in the editor." },
 };
-let uiLang = (navigator.language || "de").toLowerCase().startsWith("de") ? "de" : "en";
+let uiLang = "en";   // Einstieg ist Englisch; die im Editor gewählte Sprache wird übernommen, wenn sie hier gespeichert ist
 try { const saved = localStorage.getItem("meetupapp.lang"); if (saved === "de" || saved === "en") uiLang = saved; } catch {}
 const L = key => TEXT[uiLang][key];
 
