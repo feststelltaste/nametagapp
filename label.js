@@ -6,9 +6,10 @@
 const Label = (() => {
   const PREVIEW_SCALE = 3;   // Vorschau in 3-facher Auflösung, damit sie glatt statt pixelig aussieht
   const WIDTH = 384, MARGIN = 10, DOTS_PER_MM = 8;   // WIDTH = Druckbreite des Druckers in Punkten
-  const FONT_SANS = '"Arial Black", "Segoe UI", Arial, sans-serif';
-  const FONT_TEXT = 'Arial, "Segoe UI", sans-serif';
-  const FONT_CODE = 'Consolas, "Cascadia Mono", "Courier New", monospace';
+  // Schriften liegen in vendor/fonts (Roboto, Roboto Mono): auf jedem Gerät sieht das Etikett gleich aus. Danach kommen Ersatzschriften, falls sie fehlen.
+  const FONT_SANS = '"Roboto", Arial, "Segoe UI", sans-serif';
+  const FONT_TEXT = '"Roboto", Arial, "Segoe UI", sans-serif';
+  const FONT_CODE = '"Roboto Mono", Consolas, "Cascadia Mono", "Courier New", monospace';
 
   function wrapWords(ctx, text, maxWidth) {
     const lines = [];
@@ -25,12 +26,12 @@ const Label = (() => {
   // Größte Schrift (max..min), bei der der Text in höchstens maxLines Zeilen passt.
   function fitName(ctx, text, maxWidth, maxSize = 84, minSize = 28, maxLines = 3) {
     for (let size = maxSize; size >= minSize; size -= 2) {
-      ctx.font = `${size}px ${FONT_SANS}`;
+      ctx.font = `900 ${size}px ${FONT_SANS}`;
       const lines = wrapWords(ctx, text, maxWidth);
       const widest = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
       if (lines.length <= maxLines && widest <= maxWidth) return { size, lines };
     }
-    ctx.font = `${minSize}px ${FONT_SANS}`;
+    ctx.font = `900 ${minSize}px ${FONT_SANS}`;
     return { size: minSize, lines: wrapWords(ctx, text, maxWidth) };
   }
 
@@ -85,7 +86,7 @@ const Label = (() => {
       const greetLines = greeting ? wrapWords(probe, greeting, inner) : [];
       const greetWidth = Math.max(0, ...greetLines.map(l => probe.measureText(l).width));
 
-      probe.font = `${tagSize}px ${FONT_CODE}`;
+      probe.font = `500 ${tagSize}px ${FONT_CODE}`;
       const rows = [];
       for (const line of tags) {   // jede Eingabezeile beginnt eine neue Etikettzeile
         let row = [], rowW = 0;
@@ -114,7 +115,7 @@ const Label = (() => {
           }
         }
       }
-      probe.font = `${fit.size}px ${FONT_SANS}`;
+      probe.font = `900 ${fit.size}px ${FONT_SANS}`;
       const nameWidth = Math.max(0, ...fit.lines.map(l => probe.measureText(l).width));
       const nameLineH = Math.round(fit.size * 1.12);
       const bodyHeight = greetHeight + rows.length * (chipH + tagRowGap) + fit.lines.length * nameLineH + (fit.lines.length ? 14 : 0);
@@ -170,14 +171,14 @@ const Label = (() => {
         y += greetLineH;
       }
 
-      lctx.font = `${fit.size}px ${FONT_SANS}`;
+      lctx.font = `900 ${fit.size}px ${FONT_SANS}`;
       for (const line of fit.lines) {
         lctx.fillText(line, lengthPx / 2, y + nameLineH / 2);
         y += nameLineH;
       }
       if (fit.lines.length) y += 14;
 
-      lctx.font = `${tagSize}px ${FONT_CODE}`;
+      lctx.font = `500 ${tagSize}px ${FONT_CODE}`;
       for (const r of rows) {
         const total = r.reduce((s, c) => s + c.w, 0) + chipGap * (r.length - 1);
         let x = (lengthPx - total) / 2;
@@ -210,5 +211,11 @@ const Label = (() => {
     return canvas;
   }
 
-  return { PREVIEW_SCALE, WIDTH, MARGIN, DOTS_PER_MM, plan, previewCanvas, firstName, displayName };
+  // Die Schriften laden erst, wenn sie gebraucht werden; wer zeichnet, wartet vorher darauf (sonst erscheint kurz die Ersatzschrift)
+  const FONT_LOADS = ['900 40px "Roboto"', '700 40px "Roboto"', '400 40px "Roboto"', '500 40px "Roboto Mono"'];
+  const loadFonts = () => (typeof document !== "undefined" && document.fonts
+    ? Promise.all(FONT_LOADS.map(font => document.fonts.load(font, "AaÄäÖöÜüß#Łł"))).then(() => {}, () => {})
+    : Promise.resolve());
+
+  return { PREVIEW_SCALE, WIDTH, MARGIN, DOTS_PER_MM, plan, previewCanvas, firstName, displayName, loadFonts };
 })();

@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#f5f5f4">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
 <title>NametagApp – live</title>
 <style>
   :root { --bg:#f5f5f4; --fg:#1c1917; --muted:#78716c; --line:#d6d3d1; --accent:#c8102e; color-scheme:light; }   /* wie die App im Light Mode */
@@ -296,8 +297,11 @@ try { const saved = localStorage.getItem("meetupapp.lang"); if (saved === "de" |
 const L = key => TEXT[uiLang][key];
 
 // Zeichnet das Etikett aus dem Modell des Editors (label.js, dieselbe Berechnung wie im Editor)
+let lastPayload = null;
+Label.loadFonts().then(() => { if (lastPayload) applyPayload(lastPayload); });   // kam das Etikett vor den Schriften, jetzt mit den richtigen neu zeichnen
 function applyPayload(payload) {
   if (!payload?.model) return;
+  lastPayload = payload;
   const plan = Label.plan(payload.model);
   show({ image: Label.previewCanvas(plan, payload.model.zoom || 1).toDataURL("image/png") });
   showWelcome(payload.welcome);

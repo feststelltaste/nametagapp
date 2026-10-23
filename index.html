@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">   <!-- zum Home-Bildschirm hinzugefügt (iPhone/iPad) startet die Seite ohne Browserleisten -->
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
 <title>NametagApp</title>
 <style>
   :root { --bg:#f5f5f4; --fg:#1c1917; --card:#fff; --line:#d6d3d1; --accent:#c8102e; --on-accent:#fff; --muted:#78716c; color-scheme:light; }
@@ -15,13 +16,14 @@
   :root { --accent-soft:color-mix(in srgb, var(--accent) 14%, transparent); --accent-mid:color-mix(in srgb, var(--accent) 30%, transparent); --accent-edge:color-mix(in srgb, var(--accent) 45%, transparent); }
   * { box-sizing: border-box; }
   input[type=checkbox] { accent-color: var(--accent); }
-  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, sans-serif; }
-  main { max-width:880px; margin:0 auto; padding:24px 16px; display:grid; gap:24px; grid-template-columns:1fr; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, sans-serif; overflow-x:clip; }
+  html { -webkit-text-size-adjust:100%; text-size-adjust:100%; }   /* Handy-Browser sollen die Schrift nicht von sich aus vergrößern */
+  main { max-width:880px; margin:0 auto; padding:24px 16px; display:grid; gap:24px; grid-template-columns:minmax(0, 1fr); }   /* minmax(0, …): breite Inhalte (Vorschau) dürfen die Spalte nicht über den Bildschirm hinaus aufweiten */
   .people, .settings { margin-top:14vh; }   /* untere Boxen etwas tiefer, damit sie beim Öffnen nicht sofort im Blick sind */
   .col { display:contents; }   /* schmal: alles untereinander, Reihenfolge per order */
   form { order:1; } .preview { order:2; } .settings { order:3; } .people { order:4; }
   @media (min-width: 760px) {
-    main { grid-template-columns: 1fr 420px; align-items:stretch; }   /* stretch: Boxen einer Reihe sind gleich hoch */
+    main { grid-template-columns: minmax(0, 1fr) 420px; align-items:stretch; }   /* stretch: Boxen einer Reihe sind gleich hoch */
     .head { grid-row:1; }
     form { order:0; grid-column:1; grid-row:2; }
     .preview { order:0; grid-column:2; grid-row:2; }
@@ -164,6 +166,11 @@
   #list li.done label { color:var(--muted); text-decoration:line-through; }
   .preview { display:flex; flex-direction:column; align-items:center; }
   #print[data-connected="false"] { background:var(--card); color:var(--accent); border:2px solid var(--accent); }   /* „Verbinden“: weiß mit rotem Rand, damit er sich abhebt; „Drucken“ bleibt rot gefüllt */
+  .textlink { display:inline; width:auto; margin:0; padding:0; background:transparent; color:var(--accent); font:inherit; font-weight:600; text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+  .btfilter { order:6; margin-top:10px; text-align:left; font-size:.85rem; color:var(--muted); }
+  .btfilter summary { cursor:pointer; text-align:center; }
+  .btfilter input { margin-top:6px; font-size:.9rem; padding:8px 10px; }
+  .btfilter .hint { font-size:.8rem; }
   .linkbtn { order:5; width:auto; margin:6px auto 0; padding:4px 8px; background:transparent; color:var(--muted); font-size:.8rem; font-weight:400; text-decoration:underline; }
   .printrow { display:flex; gap:8px; align-items:stretch; width:100%; margin-top:12px; order:3; }
   .guestok { align-self:stretch; display:flex; align-items:center; padding:0 12px; border-radius:8px; border:1px solid #22c55e; background:color-mix(in srgb, #22c55e 16%, transparent); color:var(--fg); font-size:.9rem; font-weight:600; line-height:1.15; text-align:center; max-width:7.5em; }   /* der Gast hat „Passt“ getippt */
@@ -208,19 +215,7 @@
       <button type="button" id="titleLock" class="chip lock" aria-pressed="false" data-i18n-title="lockTitle" data-i18n-aria="lockTitle" title="Lock the title: “Reset” then keeps it" aria-label="Lock the title: “Reset” then keeps it">🔓</button>
     </div>
 
-    <label for="greeting" data-i18n="greetingLabel">Intro line (optional)</label>
-    <input id="greeting" value="" data-i18n-ph="greetingPh" placeholder="e.g. Hello, I'm">
-    <div class="rolls">
-      <button id="genderM" type="button" class="toggle" aria-pressed="false" data-i18n-title="maleTitle" data-i18n-aria="maleAria" title="Male form" aria-label="Man">👨</button>
-      <button id="genderF" type="button" class="toggle" aria-pressed="false" data-i18n-title="femaleTitle" data-i18n-aria="femaleAria" title="Female form" aria-label="Woman">👩</button>
-      <button id="dice" type="button" data-i18n-title="dice1Title" data-i18n-aria="dice1Title" title="Random positive adjective" aria-label="Random positive adjective">🎲</button>
-      <button id="dice2" type="button" data-i18n-title="dice2Title" data-i18n-aria="dice2Title" title="Two random positive adjectives" aria-label="Two random positive adjectives"><span class="pair"><span>🎲</span><span>🎲</span></span></button>
-      <button id="dice3" type="button" data-i18n-title="dice3Title" data-i18n-aria="dice3Title" title="Three random positive adjectives" aria-label="Three random positive adjectives"><span class="pair"><span>🎲</span><span>🎲</span><span>🎲</span></span></button>
-      <button id="greetingBack" type="button" class="toggle" data-i18n-title="backTitle" data-i18n-aria="backTitle" title="Restore previous intro line" aria-label="Restore previous intro line" disabled>↩️</button>
-      <button id="greetingClear" type="button" class="toggle" data-i18n-title="clearGreetingTitle" data-i18n-aria="clearGreetingTitle" title="Clear intro line" aria-label="Clear intro line">🗑️</button>
-    </div>
-
-    <label for="name" data-i18n="nameLabel">Name (large) – search also works by last name</label>
+    <label for="name" data-i18n="nameLabel">Name</label>
     <div class="name-row">
       <input id="name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="nameSuggest" value="" data-i18n-ph="namePh" placeholder="Type a name or pick from the list">
       <button type="button" id="checkOff" class="chip check" aria-pressed="false" data-i18n-title="checkOffTitle" data-i18n-aria="checkOffTitle" title="Check off this person in the attendee list (without printing)" aria-label="Check off this person in the attendee list (without printing)">☐</button>
@@ -231,9 +226,24 @@
       <input id="realName" list="realNames" autocomplete="off" data-i18n-ph="realPh" placeholder="Real name, for receipts">
     </div>
 
-    <label for="tags">Hashtags</label>
+    <label for="greeting" data-i18n="greetingLabel">Intro line (optional)</label>
+    <div class="title-row">
+      <input id="greeting" value="" data-i18n-ph="greetingPh" placeholder="e.g. Hello, I'm">
+      <button type="button" id="greetingLock" class="chip lock" aria-pressed="false" data-i18n-title="lockGreeting" data-i18n-aria="lockGreeting" title="Lock the intro line: “Reset” and re-rolling after a print then keep it" aria-label="Lock the intro line: “Reset” and re-rolling after a print then keep it">🔓</button>
+    </div>
+    <div class="rolls">
+      <button id="genderM" type="button" class="toggle" aria-pressed="false" data-i18n-title="maleTitle" data-i18n-aria="maleAria" title="Male form" aria-label="Man">👨</button>
+      <button id="genderF" type="button" class="toggle" aria-pressed="false" data-i18n-title="femaleTitle" data-i18n-aria="femaleAria" title="Female form" aria-label="Woman">👩</button>
+      <button id="dice" type="button" data-i18n-title="dice1Title" data-i18n-aria="dice1Title" title="Random positive adjective" aria-label="Random positive adjective">🎲</button>
+      <button id="dice2" type="button" data-i18n-title="dice2Title" data-i18n-aria="dice2Title" title="Two random positive adjectives" aria-label="Two random positive adjectives"><span class="pair"><span>🎲</span><span>🎲</span></span></button>
+      <button id="dice3" type="button" data-i18n-title="dice3Title" data-i18n-aria="dice3Title" title="Three random positive adjectives" aria-label="Three random positive adjectives"><span class="pair"><span>🎲</span><span>🎲</span><span>🎲</span></span></button>
+      <button id="greetingBack" type="button" class="toggle" data-i18n-title="backTitle" data-i18n-aria="backTitle" title="Restore previous intro line" aria-label="Restore previous intro line" disabled>↩️</button>
+      <button id="greetingClear" type="button" class="toggle" data-i18n-title="clearGreetingTitle" data-i18n-aria="clearGreetingTitle" title="Clear intro line" aria-label="Clear intro line">🗑️</button>
+    </div>
+
+    <label for="tags" data-i18n="tagsLabel">Hashtags (optional)</label>
     <textarea id="tags" data-i18n-ph="tagsPh" placeholder="#java #architecture #docs-as-code"></textarea>
-    <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n="clear" title="Resets name, intro line and hashtags">Reset</button>
+    <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n="clear" title="Resets name, intro line and hashtags (a locked title or intro line stays)">Reset</button>
   </form>
 
   <section class="people">
@@ -248,7 +258,7 @@
         <label class="colnum"><span data-i18n="colNum">No.</span> <input type="number" id="nameColNum" min="1" step="1" inputmode="numeric" aria-label="Column number"></label>
       </div>
     </div>
-    <div class="hint" id="listInfo"></div>
+    <div class="hint"><span id="listInfo"></span> <button type="button" id="clearListLink" class="textlink" hidden></button></div>
     <div id="checklist" hidden>
       <h3 class="entries" data-i18n="entries">Entries</h3>
       <ul id="list"></ul>
@@ -267,6 +277,11 @@
     <div class="tagwrap"><canvas id="canvas"></canvas></div>
     <div id="sizeInfo" class="sizeinfo"></div>
     <div class="printrow"><button id="print" type="submit" form="form" data-connected="false">Print</button><span id="guestOk" class="guestok" hidden role="status"></span></div>
+    <details id="btFilterBox" class="btfilter">
+      <summary data-i18n="btFilterTitle">Bluetooth filter (optional)</summary>
+      <input id="btFilter" type="text" autocomplete="off" spellcheck="false" placeholder="X6h" aria-label="Bluetooth filter" data-i18n-aria="btFilterTitle">
+      <div class="hint" data-i18n="btFilterHint">Only show devices whose Bluetooth name starts with this. Several names: separate them with commas. Empty: show all devices nearby.</div>
+    </details>
     <button id="disconnect" type="button" class="linkbtn" hidden></button>
     <div id="status"></div>
   </div>
@@ -326,6 +341,17 @@
   </div>
 
   <footer class="foot">© Markus Harrer · <a href="https://github.com/feststelltaste/nametagapp/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> · <a href="https://github.com/feststelltaste/nametagapp" target="_blank" rel="noopener">github.com/feststelltaste/nametagapp</a></footer>
+
+  <div id="clearListBox" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="clearListTitle">
+    <div class="card" style="width:min(440px, 100%)">
+      <h2 id="clearListTitle" data-i18n="clearListTitle">Clear the list?</h2>
+      <p id="clearListBody"></p>
+      <div class="roombtns">
+        <button type="button" id="clearListCancel" data-i18n="cancel">Cancel</button>
+        <button type="button" id="clearListYes" class="roomgo" data-i18n="clearListYes">Clear list</button>
+      </div>
+    </div>
+  </div>
 
   <div id="disconnectBox" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="disconnectTitle">
     <div class="card" style="width:min(420px, 100%)">
@@ -398,8 +424,9 @@ const T = {
     maleTitle: "Männliche Form (Großartiger)", maleAria: "Mann", femaleTitle: "Weibliche Form (Großartige)", femaleAria: "Frau",
     dice1Title: "Zufälliges positives Adjektiv", dice2Title: "Zwei zufällige positive Adjektive", dice3Title: "Drei zufällige positive Adjektive",
     backTitle: "Vorherige Zwischenzeile zurückholen", clearGreetingTitle: "Zwischenzeile leeren",
-    nameLabel: "Name (groß) – für die Suche auch Nachname möglich", namePh: "Name eintippen oder aus der Liste wählen",
-    checkOffTitle: "Diese Person in der Teilnehmerliste abhaken (ohne zu drucken)",
+    tagsLabel: "Hashtags (optional)", lockGreeting: "Zwischenzeile schützen: „Zurücksetzen“ und Neuwürfeln nach dem Druck lassen sie dann stehen",
+    nameLabel: "Name", namePh: "Name eintippen oder aus der Liste wählen",
+    checkOffTitle: "Diese Person abhaken (ohne zu drucken); steht sie noch nicht in der Liste, wird sie hinzugefügt",
     firstOnly: "Nur<br>Vorname", firstOnlyTitle: "Nur das erste Wort des Namens drucken (an/aus)",
     tagsPh: "#java #architektur #docs-as-code",
     peopleTitle: "Teilnehmerliste", entries: "Einträge", colLabel: "Spalte mit dem Namen auswählen", colNum: "Nr.", hasHeader: "Erste Zeile enthält die Spaltentitel",
@@ -409,13 +436,15 @@ const T = {
     listInfo: (n, d) => `${n} Teilnehmer, ${d} gedruckt – im Namensfeld tippen zum Suchen.`,
     noNames: "Keine Namen gefunden – wähle oben die Spalte mit dem Namen.",
     download: "⬇ CSV herunterladen", downloadTitle: "Liste mit Spalte „Gedruckt“ als CSV speichern", reset: "Haken zurücksetzen", removeList: "🗑 Liste entfernen", removeListTitle: "Die aktuell geladene Liste aus diesem Browser entfernen",
-    removeConfirm: n => `Die Liste mit ${n} Haken entfernen? Die Haken gehen verloren, wenn du sie nicht vorher als CSV herunterlädst.`,
+    clearListLink: "Hier klicken zum Entleeren.", clearListTitle: "Liste wirklich entleeren?", clearListYes: "Liste entleeren",
+    clearListBody: (n, m) => `Die Liste mit ${n} ${n === 1 ? "Person" : "Personen"} (${m} abgehakt) wird aus diesem Browser gelöscht. Wenn du sie nicht vorher als CSV herunterlädst, gehen die Haken verloren. Das lässt sich nicht rückgängig machen.`,
     checksHint: "Die Haken liegen nur in diesem Browser. Zum Sichern oder für einen anderen Rechner: herunterladen und die Datei später wieder oben hochladen, die Haken kommen dann mit zurück.",
     csvHeader: "Name;Echter Name;Gedruckt", nickMode: "Nicknames mit echten Namen überschreiben", realLabel: "Echter Name (suchen oder ergänzen)", realPh: "Echter Name, für Bewirtungsbelege", yes: "Ja", no: "Nein", csvFile: "teilnehmer",
     print: "Drucken", lengthLabel: "Etikettenlänge (mm, Papier läuft quer)", autoLength: "Länge automatisch aus dem Inhalt berechnen",
     flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
     bubbles: "Sprechblasen in der Live-Ansicht", bubbleNamePh: "Verrate uns deinen Namen", bubbleGreetingPh: "{welcher} {name} bist du?", bubbleTagsPh: "Was begeistert dich?", bubbleHint: "Leer lassen für den Standardtext. {name} = Name vom Etikett, {welcher} = Welcher/Welche (nach Geschlecht).",
     openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
+    btFilterTitle: "Bluetooth-Filter (optional)", btFilterHint: "Nur Geräte zeigen, deren Bluetooth-Name so beginnt. Mehrere Namen mit Komma trennen. Leer: alle Geräte in der Nähe zeigen.",
     fullscreenTitle: "Vollbild an/aus", connectPrinter: "Drucker verbinden", guestOk: "✓ Gast: Passt",
     openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", welcomeLabel: "Text für den zweiten Bildschirm (optional)", welcomeTitlePh: "Willkommen bei uns!", welcomeSubPh: "Hier gibt es dein Namensschild!", welcomeClearTitle: "Text für den zweiten Bildschirm leeren",
     close: "Schließen",
@@ -442,8 +471,9 @@ const T = {
     maleTitle: "Male form", maleAria: "Man", femaleTitle: "Female form", femaleAria: "Woman",
     dice1Title: "Random positive adjective", dice2Title: "Two random positive adjectives", dice3Title: "Three random positive adjectives",
     backTitle: "Restore previous intro line", clearGreetingTitle: "Clear intro line",
-    nameLabel: "Name (large) – search also works by last name", namePh: "Type a name or pick from the list",
-    checkOffTitle: "Check off this person in the attendee list (without printing)",
+    tagsLabel: "Hashtags (optional)", lockGreeting: "Lock the intro line: “Reset” and re-rolling after a print then keep it",
+    nameLabel: "Name", namePh: "Type a name or pick from the list",
+    checkOffTitle: "Check off this person (without printing); if they are not on the list yet, they are added",
     firstOnly: "First<br>name only", firstOnlyTitle: "Print only the first word of the name (on/off)",
     tagsPh: "#java #architecture #docs-as-code",
     peopleTitle: "Attendee list", entries: "Entries", colLabel: "Select the column containing the name", colNum: "No.", hasHeader: "First row contains column titles",
@@ -453,13 +483,15 @@ const T = {
     listInfo: (n, d) => `${n} attendees, ${d} printed – type in the name field to search.`,
     noNames: "No names found – pick the column containing the name above.",
     download: "⬇ Download CSV", downloadTitle: "Save the list as CSV with a “Printed” column", reset: "Reset checkmarks", removeList: "🗑 Remove list", removeListTitle: "Remove the currently loaded list from this browser",
-    removeConfirm: n => `Remove the list with ${n} checkmarks? The checkmarks are lost unless you download them as CSV first.`,
+    clearListLink: "Click here to clear it.", clearListTitle: "Really clear the list?", clearListYes: "Clear list",
+    clearListBody: (n, m) => `The list with ${n} ${n === 1 ? "person" : "people"} (${m} checked off) will be deleted from this browser. Unless you download it as CSV first, the checkmarks are lost. This cannot be undone.`,
     checksHint: "Checkmarks are only stored in this browser. To back them up or use another computer: download the list and upload the file above later – the checkmarks come back with it.",
     csvHeader: "Name;Real name;Printed", nickMode: "Overwrite nicknames with real names", realLabel: "Real name (search or complete)", realPh: "Real name, for receipts", yes: "Yes", no: "No", csvFile: "attendees",
     print: "Print", lengthLabel: "Label length (mm, paper runs sideways)", autoLength: "Calculate length automatically from the content",
     flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
     bubbles: "Speech bubbles in the live view", bubbleNamePh: "Tell us your name", bubbleGreetingPh: "Which {name} are you?", bubbleTagsPh: "What excites you?", bubbleHint: "Leave empty for the default. {name} = name on the label.",
     openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
+    btFilterTitle: "Bluetooth filter (optional)", btFilterHint: "Only show devices whose Bluetooth name starts with this. Several names: separate them with commas. Empty: show all devices nearby.",
     fullscreenTitle: "Full screen on/off", connectPrinter: "Connect printer", guestOk: "✓ Guest: OK",
     openTop: "Open the second screen (live view) in a new window", welcomeLabel: "Second screen text (optional)", welcomeTitlePh: "Welcome!", welcomeSubPh: "Get your name tag here!", welcomeClearTitle: "Clear the second screen text",
     close: "Close",
@@ -587,11 +619,11 @@ function toOneBit(ctx) {
 
 // Eingaben und Optionen bleiben beim Neuladen erhalten (localStorage; ohne Zugriff startet die Seite leer).
 const FIELDS_KEY = "meetupapp.fields";
-const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub", "bubbleName", "bubbleGreeting", "bubbleTags"];
+const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub", "bubbleName", "bubbleGreeting", "bubbleTags", "btFilter"];
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode", "bubbles"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
-    const state = { gender, rollCount, zoom, sideCm, titleLocked: titleLocked() };
+    const state = { gender, rollCount, zoom, sideCm, titleLocked: titleLocked(), greetingLocked: greetingLocked() };
     for (const id of TEXT_FIELDS) state[id] = $(id).value;
     for (const id of CHECK_FIELDS) state[id] = $(id).checked;
     localStorage.setItem(FIELDS_KEY, JSON.stringify(state));
@@ -707,10 +739,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function ensureConnected() {
   if (txChar && device?.gatt.connected) return txChar;
   if (!device) {
-    device = await navigator.bluetooth.requestDevice({
-      filters: [{ namePrefix: "X6h" }],
-      optionalServices: [SERVICE],
-    });
+    // Filter aus dem Feld unter dem Druckknopf (Namensanfänge, mit Komma getrennt); leer: alle Geräte in der Nähe, der Nutzer wählt seinen Drucker
+    const prefixes = $("btFilter").value.split(/[,;\n]/).map(name => name.trim()).filter(Boolean);
+    device = await navigator.bluetooth.requestDevice(prefixes.length
+      ? { filters: prefixes.map(namePrefix => ({ namePrefix })), optionalServices: [SERVICE] }
+      : { acceptAllDevices: true, optionalServices: [SERVICE] });
     device.addEventListener("gattserverdisconnected", () => { txChar = null; updatePrinterUi(); });
   }
   const server = await device.gatt.connect();
@@ -727,6 +760,7 @@ function updatePrinterUi() {
   $("print").dataset.connected = String(on || !navigator.bluetooth);   // ohne Web Bluetooth gibt es nichts zu verbinden: der Knopf bleibt „Drucken“ (rot)
   $("print").textContent = !navigator.bluetooth || on ? t("print") : t("connectPrinter");
   $("disconnect").textContent = t("disconnect"); $("disconnect").hidden = !on;
+  $("btFilterBox").hidden = on || !navigator.bluetooth;   // der Filter wirkt nur beim Verbinden
 }
 
 async function printCanvas() {
@@ -750,6 +784,7 @@ async function printCanvas() {
 // ---------- UI ----------
 const status = (text, error = false) => { $("status").textContent = text; $("status").className = error ? "err" : ""; };
 
+$("btFilter").addEventListener("input", saveFields);   // der Filter wird gemerkt
 $("disconnect").addEventListener("click", () => { $("disconnectBox").hidden = false; $("disconnectCancel").focus(); });   // erst Rückfrage im Dialog
 $("disconnectCancel").addEventListener("click", () => { $("disconnectBox").hidden = true; });
 $("disconnectYes").addEventListener("click", () => { $("disconnectBox").hidden = true; device?.gatt.disconnect(); });   // gattserverdisconnected stellt den Knopf wieder auf „Verbinden“
@@ -760,14 +795,16 @@ $("form").addEventListener("submit", async event => {
   try {
     if (!(txChar && device?.gatt.connected)) { status(t("connecting")); await ensureConnected(); status(""); return; }   // erster Klick: nur verbinden; gedruckt wird mit dem nächsten
     status(t("printing"));
+    await Label.loadFonts();   // nie mit Ersatzschrift drucken
     const result = await printCanvas();
     const printed = matchPerson();
     if (printed) { printed.done = true; save(); renderList(); }
+    else addToList($("name").value.trim());   // steht noch nicht auf der Liste: jetzt hinzufügen (gedruckt = abgehakt)
     setFirstOnly(true);   // nächstes Etikett wieder nur mit Vornamen
     render();
     status(t("printed", result.sent.toFixed(1), result.total.toFixed(1), result.rows));
     if (room) startRoom({ blank: true });   // nächster Gast scannt einen frischen Code; wer den alten gescannt hat, behält sein Etikett
-    if ($("rerollAfterPrint").checked && $("greeting").value.trim()) rollGreeting(rollCount);   // nur wenn die Zwischenzeile benutzt wird
+    if ($("rerollAfterPrint").checked && !greetingLocked() && $("greeting").value.trim()) rollGreeting(rollCount);   // nur wenn die Zwischenzeile benutzt wird
   } catch (error) {
     if (error.name === "NotFoundError") status(t("noPrinter"), true);
     else status(t("error", error.message), true);
@@ -960,12 +997,20 @@ $("realName").addEventListener("change", () => {
   $("name").value = nickname;
   save(); renderList(); render();
 });
+// Namen, die nicht auf der Liste stehen (oder gar keine Liste): erst mit dem Haken (oder dem Druck) kommen sie neu auf die Liste, die sich dann als CSV speichern lässt
+function addToList(name) {
+  if (!name) return null;
+  const person = { name, done: true, real: "" };
+  people.push(person);
+  save(); renderList();
+  return person;
+}
 function updateCheckOff() {
   const person = matchPerson();
   const done = Boolean(person?.done);
   $("checkOff").setAttribute("aria-pressed", String(done));
   $("checkOff").textContent = done ? "☑" : "☐";
-  $("checkOff").disabled = !person;
+  $("checkOff").disabled = !person && !$("name").value.trim();   // auch Namen, die nicht auf der Liste stehen, lassen sich abhaken (und kommen dabei auf die Liste)
 }
 
 function renderList() {
@@ -996,6 +1041,7 @@ function renderList() {
   syncRealField();
   const done = people.filter(p => p.done).length;
   $("listInfo").textContent = people.length ? t("listInfo", people.length, done) : t("listInfoDefault");
+  $("clearListLink").textContent = t("clearListLink"); $("clearListLink").hidden = !people.length;
 }
 
 $("file").addEventListener("change", async event => {
@@ -1036,7 +1082,7 @@ $("openView").addEventListener("click", openSecondScreen);
 $("openViewTop").addEventListener("click", openSecondScreen);
 $("checkOff").addEventListener("click", () => {
   const person = matchPerson();
-  if (!person) return;
+  if (!person) { addToList($("name").value.trim()); return; }
   person.done = !person.done;   // von Hand abhaken oder wieder öffnen
   save(); renderList();
 });
@@ -1115,13 +1161,21 @@ $("name").addEventListener("keydown", event => {
 addEventListener("resize", () => { if (suggest.open) refreshSuggest(); });   // z. B. die Bildschirmtastatur am Handy: Liste neu platzieren statt schließen
 addEventListener("scroll", event => { if (event.target !== $("nameSuggest")) closeSuggest(); }, true);   // die Seite scrollt: Liste zu; Scrollen in der Liste selbst nicht
 $("download").addEventListener("click", downloadList);
-$("removeList").addEventListener("click", () => {
-  const checked = people.filter(p => p.done).length;
-  if (checked && !confirm(t("removeConfirm", checked))) return;   // nur nachfragen, wenn Haken verloren gehen
+// Liste entleeren: immer mit Rückfrage im Dialog (aus dem Knopf „Liste entfernen“ und aus dem Link im Hinweis)
+function openClearList() {
+  if (!people.length) return;
+  $("clearListBody").textContent = t("clearListBody", people.length, people.filter(p => p.done).length);
+  $("clearListBox").hidden = false; $("clearListCancel").focus();
+}
+function clearList() {
   people = []; csvRows = null; doneFromFile = new Set(); realFromFile = new Map();
   $("file").value = "";   // dieselbe Datei lässt sich danach erneut laden
   save(); renderList(); refreshColumnOptions(); updateCheckOff();
-});
+}
+$("removeList").addEventListener("click", openClearList);
+$("clearListLink").addEventListener("click", openClearList);
+$("clearListCancel").addEventListener("click", () => { $("clearListBox").hidden = true; });
+$("clearListYes").addEventListener("click", () => { $("clearListBox").hidden = true; clearList(); });
 $("reset").addEventListener("click", () => { people.forEach(p => { p.done = false; }); save(); renderList(); });
 
 for (const id of ["title", "greeting", "name", "tags", "welcomeTitle", "welcomeSub"]) $(id).addEventListener("input", () => { roomHold = false; render(); });
@@ -1264,9 +1318,11 @@ $("dice3").addEventListener("click", () => rollGreeting(3));
 $("welcomeClear").addEventListener("click", () => { $("welcomeTitle").value = ""; $("welcomeSub").value = ""; render(); $("welcomeTitle").focus(); });
 $("clear").addEventListener("click", () => {
   setFirstOnly(true);
-  pushHistory();   // die Zwischenzeile lässt sich mit ↩️ zurückholen
-  $("greeting").value = "";
-  lastRoll = null;
+  if (!greetingLocked()) {   // Schloss offen: die Zwischenzeile wird geleert; mit Schloss bleibt sie stehen
+    pushHistory();   // die Zwischenzeile lässt sich mit ↩️ zurückholen
+    $("greeting").value = "";
+    lastRoll = null;
+  }
   $("name").value = "";
   $("tags").value = "";
   if (!titleLocked()) $("title").value = "";   // Schloss offen: auch der Titel wird geleert; mit Schloss bleibt er stehen
@@ -1284,6 +1340,13 @@ function setTitleLock(on) {
 }
 const titleLocked = () => $("titleLock").getAttribute("aria-pressed") === "true";
 $("titleLock").addEventListener("click", () => { setTitleLock(!titleLocked()); saveFields(); });
+// Schloss an der Zwischenzeile: zu = „Zurücksetzen“ und das Neuwürfeln nach dem Druck lassen sie stehen. Sie bleibt immer änderbar (Würfel, Geschlecht, Papierkorb, Tippen).
+function setGreetingLock(on) {
+  $("greetingLock").setAttribute("aria-pressed", String(on));
+  $("greetingLock").textContent = on ? "🔒" : "🔓";
+}
+const greetingLocked = () => $("greetingLock").getAttribute("aria-pressed") === "true";
+$("greetingLock").addEventListener("click", () => { setGreetingLock(!greetingLocked()); saveFields(); });
 
 // Vorgabetexte für den zweiten Bildschirm; wer sie nicht ändert, sieht sie beim Sprachwechsel in der anderen Sprache
 const WELCOME_DEFAULTS = { de: ["Willkommen bei uns!", "Hier gibt es dein Namensschild!"], en: ["Welcome!", "Get your name tag here!"] };
@@ -1306,6 +1369,7 @@ function restoreFields() {
   if ([1, 0.75, 0.5].includes(state.zoom)) zoom = state.zoom;
   if ([0, 0.5, 1].includes(state.sideCm)) sideCm = state.sideCm;
   if (state.titleLocked === true) setTitleLock(true);
+  if (state.greetingLocked === true) setGreetingLock(true);
 }
 restoreFields();
 
@@ -1478,7 +1542,7 @@ function drawRepoQr() {
 }
 $("logo").addEventListener("click", () => { drawRepoQr(); $("qrbox").hidden = false; });
 $("qrbox").addEventListener("click", () => { $("qrbox").hidden = true; });
-addEventListener("keydown", e => { if (e.key === "Escape") { $("qrbox").hidden = true; if (!$("roomBox").hidden) closeRoomBox(); $("disconnectBox").hidden = true; } });
+addEventListener("keydown", e => { if (e.key === "Escape") { $("qrbox").hidden = true; if (!$("roomBox").hidden) closeRoomBox(); $("disconnectBox").hidden = true; $("clearListBox").hidden = true; } });
 $("lang").addEventListener("click", () => {
   const was = lang;
   lang = lang === "de" ? "en" : "de";
@@ -1490,6 +1554,7 @@ $("lang").addEventListener("click", () => {
 });
 load(); applyI18n();
 render();
+Label.loadFonts().then(render);   // sobald die Schriften da sind, noch einmal zeichnen (und an die Live-Ansicht senden)
 document.fonts?.ready.then(render);
 </script>
 </body>
