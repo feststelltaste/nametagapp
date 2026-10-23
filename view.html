@@ -55,6 +55,10 @@
   #fs { position:fixed; left:max(12px, env(safe-area-inset-left)); bottom:max(12px, env(safe-area-inset-bottom)); z-index:3; width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; color:var(--fg); background:#fff; border:1px solid var(--line); border-radius:10px; cursor:pointer; opacity:.45; transition:opacity .15s; -webkit-tap-highlight-color:transparent; }
   #fs:hover, #fs:focus-visible, #fs[aria-pressed="true"] { opacity:1; }
   #fs[hidden] { display:none; }
+  #okbar { position:fixed; left:0; right:0; bottom:max(16px, env(safe-area-inset-bottom)); z-index:5; display:flex; flex-direction:column; align-items:center; gap:8px; padding:0 16px; pointer-events:none; }
+  #okbar[hidden] { display:none; }
+  #ok { pointer-events:auto; font:inherit; font-size:1.2rem; font-weight:700; padding:14px 40px; border-radius:999px; border:3px solid var(--accent); background:#fff; color:var(--accent); box-shadow:0 6px 24px rgba(0,0,0,.2); cursor:pointer; }
+  #okNote { max-width:min(420px, 100%); padding:10px 14px; border-radius:12px; background:#fff; border:1px solid var(--line); color:var(--muted); font-size:.9rem; text-align:center; }
   #lostNote { display:none; position:fixed; left:0; right:0; bottom:8px; text-align:center; font-size:.8rem; color:var(--muted); z-index:2; }
   body.lost #lostNote { display:block; }
   #wait { text-align:center; color:var(--muted); padding:24px; }
@@ -79,6 +83,7 @@
 </div>
 <div id="bubble" class="bubble" role="status" hidden></div>
 <div id="ideas" aria-hidden="true" hidden></div>
+<div id="okbar" hidden><button type="button" id="ok"></button><div id="okNote" hidden></div></div>
 <div id="lostNote"></div>
 <aside id="scan" hidden>
   <div id="scanQr" aria-hidden="true"></div>
@@ -260,27 +265,29 @@ const README_PRIVACY = "https://github.com/feststelltaste/nametagapp#privacy", N
 const TEXT = {
   de: { scan: "Scanne den Code, um dein Namensschild auf dein Handy zu übertragen. Nach dem Scannen musst du erst zustimmen; ohne deine Zustimmung werden keine Daten übertragen.", waitingTitle: "Noch kein Namensschild", waiting: "Sobald im Editor ein Etikett erscheint, siehst du es hier live.",
         bubble_name: "Verrate uns deinen Namen", bubble_greeting: "{welcher} {name}\nbist du?", bubble_greeting_noname: "Wie\nbist du so?", bubble_tags: "Was begeistert dich?",
+        okButton: "Passt ✓", okDone: "Danke! Die Verbindung ist beendet, dein Namensschild bleibt hier sichtbar. Du kannst diese Seite schließen.",
         reconnecting: "Verbindung unterbrochen, versuche es erneut …", bad: "Dieser Link ist ungültig. Scanne den QR-Code im Editor noch einmal.",
         consentTitle: "Namensschild auf dein Handy übertragen?",
         consentIntro: "Du hast den Code gescannt. Wenn du zustimmst, werden die Daten deines Namensschilds (Name, Titel, Hashtags) über den öffentlichen Dienst ntfy.sh (ein Drittanbieter) auf dieses Handy übertragen. Erst wenn du unten zustimmst, passiert Folgendes:",
         consentItems: ["ntfy.sh sieht deine IP-Adresse, deinen Browser-Typ und die Adresse dieser Seite.",
                        "Die Daten deines Namensschilds (Name, Titel, Hashtags) werden vom Editor an dieses Handy übertragen, Ende-zu-Ende verschlüsselt über ntfy.sh. Der Dienst kann sie nicht lesen, speichert sie aber bis zu 12 Stunden.",
                        "Dein Handy sendet nur ein kurzes verschlüsseltes „Hallo“, damit das Namensschild geschickt wird. Keine Cookies, kein Konto.",
-                       "Ohne deine Zustimmung wird nichts übertragen."],
+                       "Ohne deine Zustimmung werden deine Namensschild-Daten nicht übertragen, und es wird nichts an ntfy.sh gesendet."],
         consentYes: "Zustimmen und Namensschild übertragen", consentNo: "Nicht zustimmen", consentDone: "Du hast nicht zugestimmt, es wurden keine Daten übertragen. Du kannst diese Seite schließen.",
-        consentHost: "Schon beim Öffnen dieser Seite hat GitHub Pages (der Hoster dieser Seite) deine IP-Adresse und deinen Browser-Typ gesehen. Das lässt sich vor deiner Zustimmung nicht vermeiden.", consentGithub: "Datenschutzerklärung von GitHub",
+        consentHost: "Hinweis: Beim Öffnen dieser Seite hat deren Hoster GitHub Pages bereits deine IP-Adresse und deinen Browser-Typ gesehen. Das hat mit deiner Entscheidung hier nichts zu tun und lässt sich nicht vermeiden.", consentGithub: "Datenschutzerklärung von GitHub",
         consentMore: "Details zum Datenschutz", consentNtfy: "Datenschutzerklärung von ntfy" },
   en: { scan: "Scan to transfer your name tag to your phone. After scanning you must agree first; without your consent no data is transferred.", waitingTitle: "No name tag yet", waiting: "As soon as a label appears in the editor, you will see it here live.",
         bubble_name: "Tell us your name", bubble_greeting: "Which {name} are you?", bubble_greeting_noname: "What are you like?", bubble_tags: "What excites you?",
+        okButton: "Looks good ✓", okDone: "Thanks! The connection is closed, your name tag stays visible here. You can close this page.",
         reconnecting: "Connection lost, trying again …", bad: "This link is not valid. Scan the QR code in the editor again.",
         consentTitle: "Transfer your name tag to your phone?",
         consentIntro: "You have scanned the code. If you agree, the data of your name tag (name, title, hashtags) is transferred to this phone through the public service ntfy.sh (a third party). Only when you agree below, this happens:",
         consentItems: ["ntfy.sh sees your IP address, your browser type and the address of this page.",
                        "The data of your name tag (name, title, hashtags) is transferred from the editor to this phone, end-to-end encrypted through ntfy.sh. The service cannot read it, but keeps it for up to 12 hours.",
                        "Your phone only sends a short encrypted “hello” so that the name tag is sent. No cookies, no account.",
-                       "Without your consent nothing is transferred."],
+                       "Without your consent your name tag data is not transferred and nothing is sent to ntfy.sh."],
         consentYes: "Agree and transfer my name tag", consentNo: "Do not agree", consentDone: "You did not agree, so no data was transferred. You can close this page.",
-        consentHost: "When this page was opened, GitHub Pages (the host of this page) already saw your IP address and browser type. That cannot be avoided before you agree.", consentGithub: "GitHub privacy statement",
+        consentHost: "Note: When this page was opened, its host GitHub Pages already saw your IP address and browser type. That has nothing to do with your choice here and cannot be avoided.", consentGithub: "GitHub privacy statement",
         consentMore: "Privacy details", consentNtfy: "ntfy privacy policy" },
 };
 const phoneLang = (navigator.languages?.length ? navigator.languages : [navigator.language || "en"]).map(l => l.toLowerCase().slice(0, 2)).find(l => l === "de" || l === "en") || "en";   // die erste unterstützte Sprache des Handys
@@ -294,11 +301,29 @@ function applyPayload(payload) {
   const plan = Label.plan(payload.model);
   show({ image: Label.previewCanvas(plan, payload.model.zoom || 1).toDataURL("image/png") });
   showWelcome(payload.welcome);
+  offerOk(Boolean((payload.model.name || "").trim()));
 }
-let roomSubscription = null;
+let roomSubscription = null, okTimer = null, currentRoom = null;
+// „Passt“ quittiert das Etikett: das Abo bei ntfy.sh wird geschlossen (gibt den Platz für andere Gäste im selben WLAN frei), das Etikett bleibt sichtbar.
+// Ohne Tippen wird nach 15 Minuten ohne neue Nachricht genauso beendet.
+function offerOk(show) {
+  clearTimeout(okTimer);
+  $("ok").textContent = L("okButton"); $("ok").hidden = false;
+  $("okbar").hidden = !show; $("okNote").hidden = true;
+  if (show) okTimer = setTimeout(() => finishRoom(), 15 * 60 * 1000);
+}
+function finishRoom(confirmed = false) {
+  clearTimeout(okTimer);
+  if (confirmed && currentRoom) Relay.ack(currentRoom).catch(() => {});   // dem Editor melden: „Passt“
+  roomSubscription?.close(); roomSubscription = null;
+  document.body.classList.remove("lost"); $("lostNote").textContent = "";
+  $("ok").hidden = true; $("okNote").textContent = L("okDone"); $("okNote").hidden = false; $("okbar").hidden = false;
+}
+$("ok").addEventListener("click", () => finishRoom(true));
 function connectRoom(room) {
   const wait = $("wait");
   wait.innerHTML = ""; const bold = document.createElement("b"); bold.textContent = L("waitingTitle"); wait.append(bold, L("waiting"));
+  currentRoom = room;
   roomSubscription = Relay.subscribe(room, applyPayload, state => {
     if (state === "verbunden") Relay.signal(room).catch(() => {});   // dem Editor melden: ab jetzt senden (auch nach einer Wiederverbindung)
     document.body.classList.toggle("lost", state === "getrennt");

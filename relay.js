@@ -35,8 +35,14 @@ const Relay = (() => {
     return m ? { topic: m[1], key: m[2], token: m[0] } : null;
   }
 
+  // Frische: jede Nachricht trägt einen steigenden Zeitstempel (_t) im verschlüsselten Teil. Der Empfänger nimmt nur Nachrichten an, die neuer sind
+  // als die zuletzt angenommene; so kann niemand eine ältere Nachricht aus dem Cache von ntfy.sh (bis zu 12 Stunden) erneut einspielen.
+  let lastStamp = 0;
+  const stamp = () => (lastStamp = Math.max(Date.now(), lastStamp + 1));   // wächst auch, wenn die Uhr zurückspringt
+  const fresher = () => { let last = 0; return t => (typeof t !== "number" || t > last ? (last = Math.max(last, t || 0), true) : false); };   // ohne _t (ältere Version): annehmen
+
   async function post(topic, key, object) {
-    const sealed = await seal(key, JSON.stringify(object));
+    const sealed = await seal(key, JSON.stringify({ ...object, _t: stamp() }));
     if (sealed.length > MAX_PAYLOAD) throw new Error("Nachricht zu groß");
     const response = await fetch(`${SERVER}/${topic}`, { method: "POST", body: sealed });
     if (!response.ok) { const error = new Error(`Relay ${response.status}`); error.status = response.status; throw error; }
@@ -46,13 +52,18 @@ const Relay = (() => {
   const publish = (room, object) => post(room.topic, room.key, object);
 
   // Rückkanal ("<Thema>a"): Ein Gerät, das den QR-Code öffnet, meldet sich kurz. Erst darauf sendet der Editor, vorher geht nichts raus.
-  const signal = room => post(room.topic + "a", room.key, { hello: Date.now() });
-  function listen(room, onSignal) {
-    const source = new EventSource(`${SERVER}/${room.topic}a/sse?since=latest`);
+  const signal = room => post(room.topic + "a", room.key, { hello: true });
+  // Quittung: der Gast tippt „Passt“, der Editor zeigt es neben dem Druckknopf. Läuft über denselben Rückkanal wie das „Hallo“.
+  const ack = room => post(room.topic + "a", room.key, { ok: true });
+  function listen(room, onSignal, onAck) {
+    const source = new EventSource(`${SERVER}/${room.topic}a/sse?since=latest`);   // Rückkanal: mehrere Gäste mit eigenen Uhren schreiben hierher, deshalb keine Reihenfolge-Prüfung (ein wiedereingespieltes „Hallo“ kostet höchstens eine Nachricht)
     source.onmessage = async event => {
       try {
         const data = JSON.parse(event.data);
-        if (data.event === "message" && JSON.parse(await unseal(room.key, data.message)).hello) onSignal();
+        if (data.event !== "message") return;
+        const message = JSON.parse(await unseal(room.key, data.message));
+        if (message.hello) onSignal();
+        else if (message.ok) onAck?.();
       } catch { /* fremde Nachricht: ignorieren */ }
     };
     return { close: () => source.close() };
@@ -64,13 +75,15 @@ const Relay = (() => {
    */
   function subscribe(room, onMessage, onState) {
     const source = new EventSource(`${SERVER}/${room.topic}/sse?since=latest`);
+    const isFresh = fresher();
     source.onopen = () => onState?.("verbunden");
     source.onerror = () => onState?.("getrennt");   // EventSource verbindet sich von selbst neu
     source.onmessage = async event => {
       try {
         const data = JSON.parse(event.data);
         if (data.event !== "message") return;
-        onMessage(JSON.parse(await unseal(room.key, data.message)));
+        const message = JSON.parse(await unseal(room.key, data.message));
+        if (isFresh(message._t)) onMessage(message);   // ältere oder doppelte Nachrichten (z. B. nach einer Wiederverbindung) werden verworfen
       } catch { /* fremde oder beschädigte Nachricht: ignorieren */ }
     };
     return { close: () => source.close() };
@@ -89,5 +102,5 @@ const Relay = (() => {
     return qr.createSvgTag({ cellSize: 3, margin: 8, scalable: true });
   }
 
-  return { createRoom, parseRoom, publish, signal, listen, subscribe, reachable, qrSvg };
+  return { createRoom, parseRoom, publish, signal, ack, listen, subscribe, reachable, qrSvg };
 })();

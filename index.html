@@ -165,7 +165,9 @@
   .preview { display:flex; flex-direction:column; align-items:center; }
   #print[data-connected="false"] { background:var(--card); color:var(--accent); border:2px solid var(--accent); }   /* „Verbinden“: weiß mit rotem Rand, damit er sich abhebt; „Drucken“ bleibt rot gefüllt */
   .linkbtn { order:5; width:auto; margin:6px auto 0; padding:4px 8px; background:transparent; color:var(--muted); font-size:.8rem; font-weight:400; text-decoration:underline; }
-  .preview #print { flex:1; width:100%; min-height:64px; max-height:96px; margin-top:12px; font-size:1.4rem; letter-spacing:.02em; order:3; }   /* riesig: füllt die Box bis nach unten */
+  .printrow { display:flex; gap:8px; align-items:stretch; width:100%; margin-top:12px; order:3; }
+  .guestok { align-self:stretch; display:flex; align-items:center; padding:0 12px; border-radius:8px; border:1px solid #22c55e; background:color-mix(in srgb, #22c55e 16%, transparent); color:var(--fg); font-size:.9rem; font-weight:600; line-height:1.15; text-align:center; max-width:7.5em; }   /* der Gast hat „Passt“ getippt */
+  .preview #print { flex:1; width:100%; min-height:64px; max-height:96px; margin-top:0; font-size:1.4rem; letter-spacing:.02em; }   /* riesig: füllt die Box bis nach unten */
   .preview #status { order:4; }   /* Meldungen („Verbinde …“) stehen direkt unter dem Druckknopf, an der Stelle des Trennen-Links */
   .preview .tagwrap { order:0; }
   #status { margin-top:12px; min-height:1.4em; color:var(--muted); font-size:.9rem; }
@@ -182,7 +184,8 @@
     #clear { margin-top:6px !important; padding:9px; }
     .tagwrap { margin:10px 0 12px; }   /* die Trägerpapier-Streifen ragen 9 px über und unter das Etikett */
     .sizeinfo { margin-top:0; font-size:.75rem; }
-    .preview #print { margin-top:6px; min-height:52px; font-size:1.25rem; }
+    .printrow { margin-top:6px; }
+    .preview #print { min-height:52px; font-size:1.25rem; }
     .preview { padding:10px 12px; }
     .head { gap:8px; flex-wrap:wrap; }
     .headbtns { gap:6px; }
@@ -263,7 +266,7 @@
   <div class="preview">
     <div class="tagwrap"><canvas id="canvas"></canvas></div>
     <div id="sizeInfo" class="sizeinfo"></div>
-    <button id="print" type="submit" form="form" data-connected="false">Print</button>
+    <div class="printrow"><button id="print" type="submit" form="form" data-connected="false">Print</button><span id="guestOk" class="guestok" hidden role="status"></span></div>
     <button id="disconnect" type="button" class="linkbtn" hidden></button>
     <div id="status"></div>
   </div>
@@ -413,7 +416,7 @@ const T = {
     flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
     bubbles: "Sprechblasen in der Live-Ansicht", bubbleNamePh: "Verrate uns deinen Namen", bubbleGreetingPh: "{welcher} {name} bist du?", bubbleTagsPh: "Was begeistert dich?", bubbleHint: "Leer lassen für den Standardtext. {name} = Name vom Etikett, {welcher} = Welcher/Welche (nach Geschlecht).",
     openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
-    fullscreenTitle: "Vollbild an/aus", connectPrinter: "Drucker verbinden",
+    fullscreenTitle: "Vollbild an/aus", connectPrinter: "Drucker verbinden", guestOk: "✓ Gast: Passt",
     openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", welcomeLabel: "Text für den zweiten Bildschirm (optional)", welcomeTitlePh: "Willkommen bei uns!", welcomeSubPh: "Hier gibt es dein Namensschild!", welcomeClearTitle: "Text für den zweiten Bildschirm leeren",
     close: "Schließen",
     roomBtn: "Zweiter Bildschirm auf einem anderen Gerät (QR-Code)", roomBtnOn: "Zweiter Bildschirm läuft (QR-Code)",
@@ -457,7 +460,7 @@ const T = {
     flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
     bubbles: "Speech bubbles in the live view", bubbleNamePh: "Tell us your name", bubbleGreetingPh: "Which {name} are you?", bubbleTagsPh: "What excites you?", bubbleHint: "Leave empty for the default. {name} = name on the label.",
     openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
-    fullscreenTitle: "Full screen on/off", connectPrinter: "Connect printer",
+    fullscreenTitle: "Full screen on/off", connectPrinter: "Connect printer", guestOk: "✓ Guest: OK",
     openTop: "Open the second screen (live view) in a new window", welcomeLabel: "Second screen text (optional)", welcomeTitlePh: "Welcome!", welcomeSubPh: "Get your name tag here!", welcomeClearTitle: "Clear the second screen text",
     close: "Close",
     roomBtn: "Second screen on another device (QR code)", roomBtnOn: "Second screen is running (QR code)",
@@ -1410,17 +1413,24 @@ function scheduleRoom(now = false) {
 }
 
 // Neuer Raum. Nach dem Druck (blank) beginnt er leer, ohne Namen und Hashtags des vorigen Gastes, und wird erst beim nächsten Tippen aktuell.
+// Quittung des Gastes („Passt“): kommt oft erst nach dem Druck, also auch auf dem Rückkanal des vorigen Raums lauschen (kurz, solange ein Gast da war)
+let prevListener = null, guestOkTimer = null;
+function showGuestOk() {
+  $("guestOk").textContent = t("guestOk"); $("guestOk").hidden = false;
+  clearTimeout(guestOkTimer); guestOkTimer = setTimeout(() => { $("guestOk").hidden = true; }, 30000);
+}
 function startRoom({ blank = false, quiet = false } = {}) {
-  clearTimeout(roomTimer); roomTimer = null; roomListener?.close();
-  room = Relay.createRoom();
+  clearTimeout(roomTimer); roomTimer = null;
+  prevListener?.close(); prevListener = roomJoined ? roomListener : (roomListener?.close(), null);
+  const mine = room = Relay.createRoom();
   roomError = null; roomLastJson = ""; roomJoined = false; roomHold = blank;
   // Nichts senden, bis sich ein Gerät meldet. Meldet sich eins (auch erneut nach einem Verbindungsabbruch), geht der Stand raus;
   // in einem Raum nach dem Druck der leere Stand, bis jemand tippt.
-  roomListener = Relay.listen(room, () => { roomJoined = true; roomLastJson = ""; sendRoom(roomHold ? blankPayload() : undefined); updateRoomUi(); });
+  roomListener = Relay.listen(mine, () => { if (room !== mine) return; roomJoined = true; roomLastJson = ""; sendRoom(roomHold ? blankPayload() : undefined); updateRoomUi(); }, showGuestOk);
   pairShown = !quiet; announcePair(); updateRoomUi();
 }
 function stopRoom() {
-  clearTimeout(roomTimer); roomTimer = null; roomListener?.close(); roomListener = null;
+  clearTimeout(roomTimer); roomTimer = null; roomListener?.close(); roomListener = null; prevListener?.close(); prevListener = null;
   room = null; roomHold = false; roomJoined = false; roomError = null; roomLastJson = "";
   announcePair(); updateRoomUi();
 }
