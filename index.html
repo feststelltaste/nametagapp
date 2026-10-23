@@ -167,7 +167,7 @@
 
     <label for="tags">Hashtags</label>
     <textarea id="tags" data-i18n-ph="tagsPh" placeholder="#java #architecture #docs-as-code"></textarea>
-    <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n="clear">Clear name, intro line and hashtags</button>
+    <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n="clear" title="Clears name, intro line and hashtags">Clear</button>
   </form>
 
   <section class="people">
@@ -319,7 +319,7 @@ const T = {
     mirrorClosed: "Verbindung getrennt – bitte neu koppeln.", mirrorExpired: "Der Code ist abgelaufen (5 Minuten). Klicke auf „Neu koppeln“.",
     mirrorEach: "Nach jedem Druck neuen QR-Code erzeugen (der alte verfällt)", mirrorError: m => `Fehler: ${m}`, mirrorBadCode: "Das ist kein gültiger Antwort-Code.",
     mirrorTimeout: "Keine Verbindung zustande gekommen. Prüfe, ob beide Geräte online sind, und koppele neu.",
-    clear: "Name, Zwischenzeile und Hashtags leeren", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLabel: "Seitenränder (cm)",
+    clear: "Leeren", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLabel: "Seitenränder (cm)",
     sizeInfo: (l, w) => `Etikett ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Gesendet in ${sec} s (${bytes} Bytes) – warte auf den Druck …`,
     noBluetooth: "Web Bluetooth fehlt – bitte Chrome oder Edge über localhost/HTTPS nutzen.",
@@ -360,7 +360,7 @@ const T = {
     mirrorClosed: "Connection lost – please pair again.", mirrorExpired: "The code has expired (5 minutes). Click “Pair again”.",
     mirrorEach: "Create a new QR code after each print (the old one expires)", mirrorError: m => `Error: ${m}`, mirrorBadCode: "That is not a valid answer code.",
     mirrorTimeout: "No connection could be made. Check that both devices are online and pair again.",
-    clear: "Clear name, intro line and hashtags", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLabel: "Side margins (cm)",
+    clear: "Clear", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLabel: "Side margins (cm)",
     sizeInfo: (l, w) => `Label ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Sent in ${sec} s (${bytes} bytes) – waiting for the print …`,
     noBluetooth: "Web Bluetooth is missing – please use Chrome or Edge via localhost/HTTPS.",
@@ -1158,6 +1158,7 @@ $("clear").addEventListener("click", () => {
   lastRoll = null;
   $("name").value = "";
   $("tags").value = "";
+  updateCheckOff();   // das Feld wurde per Skript geleert: der Haken neben dem Namen muss mit weg
   render();
   $("name").focus();
 });
