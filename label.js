@@ -66,7 +66,7 @@ const Label = (() => {
     const name = displayName(model.name || "", model.firstOnly !== false);
     const tags = parseTags(model.tags || "");
     const zoom = model.zoom || 1;
-    const sideCm = model.sideCm ?? 0.5;
+    const sideCm = model.sideCm ?? 0;
     const autoLength = model.autoLength !== false;
     const lengthMm = model.lengthMm || 80;
 
@@ -202,14 +202,25 @@ const Label = (() => {
   }
 
   /** Vorschau-Canvas (glatt, 3-fach): immer 48 mm breit, mit Zoom < 1 kürzer und die Schrift kleiner, mittig auf der festen Breite. */
-  function previewCanvas(p, zoom) {
+  // marginDots: der eigene Rand des Druckers (leeres Papier an beiden Enden, in Druckpunkten); er steht in der Vorschau links und rechts
+  // vom Etikett, gedruckt wird er nicht (den lässt der Drucker selbst frei). Eine gestrichelte Linie zeigt, wo der bedruckte Bereich beginnt.
+  function previewCanvas(p, zoom, marginDots = 0) {
     const hi = p.paint(PREVIEW_SCALE * zoom);
+    const pad = Math.round(marginDots * PREVIEW_SCALE);
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(p.lengthPx * zoom * PREVIEW_SCALE);
+    canvas.width = Math.round(p.lengthPx * zoom * PREVIEW_SCALE) + 2 * pad;
     canvas.height = WIDTH * PREVIEW_SCALE;
-    canvas.getContext("2d").drawImage(hi, 0, Math.round((canvas.height - hi.height) / 2));
+    const ctx = canvas.getContext("2d");
+    if (pad) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    ctx.drawImage(hi, pad, Math.round((canvas.height - hi.height) / 2));
+    if (pad) {
+      ctx.strokeStyle = "rgba(0,0,0,.22)"; ctx.lineWidth = PREVIEW_SCALE; ctx.setLineDash([4 * PREVIEW_SCALE, 4 * PREVIEW_SCALE]);
+      for (const x of [pad, canvas.width - pad]) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+    }
     return canvas;
   }
+  /** Eigener Rand des Druckers aus dem Etikettmodell (cm) in Druckpunkten; 0 bis 3 cm. */
+  const printerMarginDots = model => Math.max(0, Math.min(3, Number(model.printerMarginCm) || 0)) * 10 * DOTS_PER_MM;
 
   // Die Schriften laden erst, wenn sie gebraucht werden; wer zeichnet, wartet vorher darauf (sonst erscheint kurz die Ersatzschrift)
   const FONT_LOADS = ['900 40px "Roboto"', '700 40px "Roboto"', '400 40px "Roboto"', '500 40px "Roboto Mono"'];
@@ -217,5 +228,5 @@ const Label = (() => {
     ? Promise.all(FONT_LOADS.map(font => document.fonts.load(font, "AaÄäÖöÜüß#Łł"))).then(() => {}, () => {})
     : Promise.resolve());
 
-  return { PREVIEW_SCALE, WIDTH, MARGIN, DOTS_PER_MM, plan, previewCanvas, firstName, displayName, loadFonts };
+  return { PREVIEW_SCALE, WIDTH, MARGIN, DOTS_PER_MM, plan, previewCanvas, printerMarginDots, firstName, displayName, loadFonts };
 })();

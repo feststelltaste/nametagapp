@@ -303,7 +303,7 @@ function applyPayload(payload) {
   if (!payload?.model) return;
   lastPayload = payload;
   const plan = Label.plan(payload.model);
-  show({ image: Label.previewCanvas(plan, payload.model.zoom || 1).toDataURL("image/png") });
+  show({ image: Label.previewCanvas(plan, payload.model.zoom || 1, Label.printerMarginDots(payload.model)).toDataURL("image/png") });
   showWelcome(payload.welcome);
   offerOk(Boolean((payload.model.name || "").trim()));
 }

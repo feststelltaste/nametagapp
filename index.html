@@ -91,7 +91,7 @@
   label { display:block; font-weight:600; margin:12px 0 4px; }
   label:first-child { margin-top:0; }
   input, textarea { width:100%; padding:10px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; }
-  textarea { font-family: Consolas, "Cascadia Mono", ui-monospace, monospace; min-height:90px; resize:vertical; }
+  textarea { font-family: Consolas, "Cascadia Mono", ui-monospace, monospace; min-height:0; resize:none; line-height:1.4; overflow-y:auto; }   /* fest drei Zeilen hoch (rows="3") */
   .hint { color:var(--muted); font-size:.85rem; margin-top:4px; }
   button { margin-top:16px; width:100%; padding:12px; font:inherit; font-weight:600; border:0; border-radius:8px; background:var(--accent); color:var(--on-accent); cursor:pointer; }
   button:disabled { opacity:.5; cursor:wait; }
@@ -132,7 +132,7 @@
   .chip { width:auto; margin:0; padding:0 10px; font:inherit; font-size:.8rem; font-weight:600; line-height:1.1; white-space:nowrap; cursor:pointer;
           background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:8px; }
   .chip[aria-pressed="true"] { background:var(--accent-mid); border-color:var(--accent); color:var(--fg); }
-  .rolls { display:flex; flex-wrap:nowrap; gap:4px; margin-top:8px; }
+  .rolls { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }   /* umbrechen statt über den Rand schieben (Emoji sind auf dem Handy breiter) */
   .rolls button { width:auto; margin:0; padding:6px 8px; white-space:nowrap; font-size:1.2rem; line-height:1.2; background:var(--accent-soft); color:var(--fg); border:1px solid var(--accent-edge); }
   .rolls button:hover:not(:disabled) { background:var(--accent-mid); }
   .rolls .pair { display:inline-flex; align-items:center; }
@@ -140,7 +140,7 @@
   .rolls .pair span:first-child { margin-left:0; transform:rotate(-12deg); }
   .rolls .pair span:nth-child(2) { transform:rotate(10deg); }
   .rolls .pair span:nth-child(3) { transform:rotate(-6deg); }
-  .rolls #greetingBack { margin-left:auto; }   /* Zurück und Leeren ganz rechts */
+  .rolls #greetingBack { margin-left:auto; }   /* Zurück ganz rechts */
   .rolls button:disabled { opacity:.35; cursor:default; }   /* ganz rechts */
   .rolls #genderF { margin-right:14px; }   /* Abstand zwischen Mann/Frau und den Würfeln */
   .rolls button.toggle { background:transparent; color:var(--fg); border:1px solid var(--line); }
@@ -185,7 +185,8 @@
     form, .preview, .settings, .people { padding:12px; border-radius:10px; }
     label { margin:6px 0 2px; }
     input, textarea { padding:9px 10px; }
-    textarea { min-height:56px; }
+    .rolls button { padding:6px 7px; }
+    .rolls #genderF { margin-right:6px; }
     .rolls { margin-top:6px; }
     button { margin-top:10px; padding:11px; }
     #clear { margin-top:6px !important; padding:9px; }
@@ -238,11 +239,10 @@
       <button id="dice2" type="button" data-i18n-title="dice2Title" data-i18n-aria="dice2Title" title="Two random positive adjectives" aria-label="Two random positive adjectives"><span class="pair"><span>🎲</span><span>🎲</span></span></button>
       <button id="dice3" type="button" data-i18n-title="dice3Title" data-i18n-aria="dice3Title" title="Three random positive adjectives" aria-label="Three random positive adjectives"><span class="pair"><span>🎲</span><span>🎲</span><span>🎲</span></span></button>
       <button id="greetingBack" type="button" class="toggle" data-i18n-title="backTitle" data-i18n-aria="backTitle" title="Restore previous intro line" aria-label="Restore previous intro line" disabled>↩️</button>
-      <button id="greetingClear" type="button" class="toggle" data-i18n-title="clearGreetingTitle" data-i18n-aria="clearGreetingTitle" title="Clear intro line" aria-label="Clear intro line">🗑️</button>
     </div>
 
     <label for="tags" data-i18n="tagsLabel">Hashtags (optional)</label>
-    <textarea id="tags" data-i18n-ph="tagsPh" placeholder="#java #architecture #docs-as-code"></textarea>
+    <textarea id="tags" rows="3" data-i18n-ph="tagsPh" placeholder="#java #architecture #docs-as-code"></textarea>
     <button id="clear" type="button" style="background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px" data-i18n="clear" title="Resets name, intro line and hashtags (a locked title or intro line stays)">Reset</button>
   </form>
 
@@ -303,12 +303,15 @@
       <div>
         <label data-i18n="marginLabel">Side margins (cm)</label>
         <div class="zoombtns" id="margins" role="group">
-          <button type="button" class="chip" data-cm="0" aria-pressed="false">0</button>
-          <button type="button" class="chip" data-cm="0.5" aria-pressed="true">0,5</button>
+          <button type="button" class="chip" data-cm="0" aria-pressed="true">0</button>
+          <button type="button" class="chip" data-cm="0.5" aria-pressed="false">0,5</button>
           <button type="button" class="chip" data-cm="1" aria-pressed="false">1</button>
         </div>
       </div>
     </div>
+    <label for="printerMargin" data-i18n="printerMarginLabel" style="margin-top:12px">Printer's own margin (cm)</label>
+    <input id="printerMargin" type="number" min="0" max="3" step="0.1" value="0.8" inputmode="decimal" style="width:6em">
+    <div class="hint" data-i18n="printerMarginHint">Blank paper the printer leaves at both ends by itself. Only the preview shows it, nothing extra is printed. Other printers may differ.</div>
     <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:12px"><input type="checkbox" id="flip" style="width:auto"> <span data-i18n="flip">Reverse print direction (180°)</span></label>
     <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="rerollAfterPrint" checked style="width:auto"> <span data-i18n="reroll">Re-roll after each print</span></label>
 
@@ -410,7 +413,7 @@
 
 // ---------- Etikett zeichnen ----------
 let zoom = 1;   // Druckgröße: 1, 0.75 oder 0.5 (Schrift kleiner, die Etikettenbreite bleibt)
-let sideCm = 0.5;   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom)
+let sideCm = 0;   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom). Standard 0: der Drucker lässt ohnehin etwa 0,8 cm Papier an beiden Enden frei
 const ROLL_MM = 57;   // Rollenbreite: immer 57 mm, davon werden 48 mm bedruckt (384 Punkte)
 const { PREVIEW_SCALE, WIDTH, DOTS_PER_MM, firstName } = Label;   // Etikett-Berechnung und -Zeichnung: label.js
 
@@ -423,7 +426,7 @@ const T = {
     titleLabel: "Titeltext", lockTitle: "Titel schützen: „Zurücksetzen“ lässt ihn dann stehen", titlePh: "Titel deiner Veranstaltung", greetingLabel: "Zwischenzeile (optional)", greetingPh: "z. B. Hallo, ich bin",
     maleTitle: "Männliche Form (Großartiger)", maleAria: "Mann", femaleTitle: "Weibliche Form (Großartige)", femaleAria: "Frau",
     dice1Title: "Zufälliges positives Adjektiv", dice2Title: "Zwei zufällige positive Adjektive", dice3Title: "Drei zufällige positive Adjektive",
-    backTitle: "Vorherige Zwischenzeile zurückholen", clearGreetingTitle: "Zwischenzeile leeren",
+    backTitle: "Vorherige Zwischenzeile zurückholen",
     tagsLabel: "Hashtags (optional)", lockGreeting: "Zwischenzeile schützen: „Zurücksetzen“ und Neuwürfeln nach dem Druck lassen sie dann stehen",
     nameLabel: "Name", namePh: "Name eintippen oder aus der Liste wählen",
     checkOffTitle: "Diese Person abhaken (ohne zu drucken); steht sie noch nicht in der Liste, wird sie hinzugefügt",
@@ -457,7 +460,7 @@ const T = {
     roomDisclosure: "<b>Hinweis:</b> Beim Start verbindet sich diese Seite mit dem Drittanbieter <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (sichtbar: deine <mark>IP-Adresse</mark>, die Seitenadresse, deine Browser-Kennung und eine Zufalls-ID). <mark>Etikett-Daten gehen erst raus, wenn ein Gerät den QR-Code geöffnet hat</mark>, dann aber <mark>Ende-zu-Ende verschlüsselt</mark> und vom Dienst <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'><mark>bis zu 12 Stunden</mark> zwischengespeichert</a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details und Datenschutz-Hinweise in der README</a>.",
     roomCount: n => `Heute gesendet: ${n} von etwa 250 Nachrichten (Limit des kostenlosen Dienstes).`, roomLimit: "Limit des kostenlosen Dienstes erreicht. Es geht nach einer Pause oder morgen weiter.",
     roomWaiting: "Wartet auf das erste Gerät. Bisher wurde nichts gesendet.", roomLive: "Läuft: Änderungen gehen sofort an alle Geräte, die den QR-Code geöffnet haben.", roomOffline: "Kein Kontakt zum Relay-Dienst (Internet?). Der zweite Bildschirm bekommt erst wieder Änderungen, wenn er erreichbar ist.", roomOff: "Wird nicht geteilt.",
-    clear: "Zurücksetzen", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLabel: "Seitenränder (cm)",
+    clear: "Zurücksetzen", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLabel: "Seitenränder (cm)", printerMarginLabel: "Eigener Rand des Druckers (cm)", printerMarginHint: "Leeres Papier, das der Drucker an beiden Enden von selbst lässt. Nur die Vorschau zeigt es, gedruckt wird nichts dazu. Andere Drucker können abweichen.",
     sizeInfo: (l, w) => `Etikett ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Gesendet in ${sec} s (${bytes} Bytes) – warte auf den Druck …`,
     noBluetooth: "Web Bluetooth fehlt – bitte Chrome oder Edge über localhost/HTTPS nutzen.",
@@ -470,7 +473,7 @@ const T = {
     titleLabel: "Title text", lockTitle: "Lock the title: “Reset” then keeps it", titlePh: "Your event title", greetingLabel: "Intro line (optional)", greetingPh: "e.g. Hello, I'm",
     maleTitle: "Male form", maleAria: "Man", femaleTitle: "Female form", femaleAria: "Woman",
     dice1Title: "Random positive adjective", dice2Title: "Two random positive adjectives", dice3Title: "Three random positive adjectives",
-    backTitle: "Restore previous intro line", clearGreetingTitle: "Clear intro line",
+    backTitle: "Restore previous intro line",
     tagsLabel: "Hashtags (optional)", lockGreeting: "Lock the intro line: “Reset” and re-rolling after a print then keep it",
     nameLabel: "Name", namePh: "Type a name or pick from the list",
     checkOffTitle: "Check off this person (without printing); if they are not on the list yet, they are added",
@@ -504,7 +507,7 @@ const T = {
     roomDisclosure: "<b>Note:</b> when you start, this page connects to the third party <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (visible: your <mark>IP address</mark>, the page address, your browser type and a random ID). <mark>Label data only leaves once a device has opened the QR code</mark>, but then <mark>end-to-end encrypted</mark> and <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'>cached by the service <mark>for up to 12 hours</mark></a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details and privacy notes in the README</a>.",
     roomCount: n => `Sent today: ${n} of about 250 messages (limit of the free service).`, roomLimit: "Limit of the free service reached. It continues after a pause or tomorrow.",
     roomWaiting: "Waiting for the first device. Nothing has been sent yet.", roomLive: "Running: changes go to every device that has opened the QR code right away.", roomOffline: "The relay is not reachable (internet?). The second screen gets changes again once it is.", roomOff: "Not shared.",
-    clear: "Reset", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLabel: "Side margins (cm)",
+    clear: "Reset", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLabel: "Side margins (cm)", printerMarginLabel: "Printer's own margin (cm)", printerMarginHint: "Blank paper the printer leaves at both ends by itself. Only the preview shows it, nothing extra is printed. Other printers may differ.",
     sizeInfo: (l, w) => `Label ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Sent in ${sec} s (${bytes} bytes) – waiting for the print …`,
     noBluetooth: "Web Bluetooth is missing – please use Chrome or Edge via localhost/HTTPS.",
@@ -568,6 +571,7 @@ function labelModel() {
   return {
     title: $("title").value, greeting: $("greeting").value, name: labelName(), firstOnly: firstOnly(), tags: $("tags").value,
     autoLength: $("autoLength").checked, lengthMm: parseFloat($("length").value) || 80, zoom, sideCm,
+    printerMarginCm: parseFloat($("printerMargin").value) || 0,   // eigener Rand des Druckers: nur Vorschau
   };
 }
 
@@ -579,12 +583,13 @@ function drawLabel() {
   $("length").disabled = model.autoLength;
 
   // Vorschau: liegend, in 3-facher Auflösung und glatt; immer 48 mm breit, mit kleinerer Schrift wird nur die Länge kürzer
-  const preview = Label.previewCanvas(plan, zoom);
+  const marginDots = Label.printerMarginDots(model);
+  const preview = Label.previewCanvas(plan, zoom, marginDots);
   canvas.width = preview.width;
   canvas.height = preview.height;
   canvas.getContext("2d").drawImage(preview, 0, 0);
-  previewFullPx = plan.fullPrintedPx;
-  previewPrintedPx = plan.printedPx;
+  previewFullPx = plan.fullPrintedPx + 2 * marginDots;
+  previewPrintedPx = plan.printedPx + 2 * marginDots;
   applyPreviewSize();
   const layout = plan.paint(zoom);   // dasselbe Etikett in Druckgröße; bei Zoom < 1 neu gezeichnet statt verkleinert, damit die Schrift scharf bleibt
 
@@ -602,7 +607,7 @@ function drawLabel() {
   pctx.setTransform(1, 0, 0, 1, 0, 0);
   toOneBit(pctx);
   // Länge zur Abschätzung unter der Vorschau (gedruckte Größe, mit Zoom)
-  $("sizeInfo").textContent = t("sizeInfo", Math.round(printLength / DOTS_PER_MM), ROLL_MM);
+  $("sizeInfo").textContent = t("sizeInfo", Math.round((printLength + 2 * marginDots) / DOTS_PER_MM), ROLL_MM);   // mit dem Rand des Druckers
 }
 
 // Der Drucker kennt nur Schwarz/Weiß: harter Schwellwert, damit die Vorschau genau zeigt, was gedruckt wird.
@@ -619,7 +624,7 @@ function toOneBit(ctx) {
 
 // Eingaben und Optionen bleiben beim Neuladen erhalten (localStorage; ohne Zugriff startet die Seite leer).
 const FIELDS_KEY = "meetupapp.fields";
-const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub", "bubbleName", "bubbleGreeting", "bubbleTags", "btFilter"];
+const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub", "bubbleName", "bubbleGreeting", "bubbleTags", "btFilter", "printerMargin"];
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode", "bubbles"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
@@ -1305,12 +1310,6 @@ $("greetingBack").addEventListener("click", () => {
   updateBack();
   render();
 });
-$("greetingClear").addEventListener("click", () => {
-  pushHistory();   // auch nach dem Leeren zurückholbar
-  $("greeting").value = "";
-  lastRoll = null;
-  render();
-});
 $("dice").addEventListener("click", () => rollGreeting(1));
 $("dice2").addEventListener("click", () => rollGreeting(2));
 $("dice3").addEventListener("click", () => rollGreeting(3));
@@ -1332,6 +1331,7 @@ $("clear").addEventListener("click", () => {
   $("name").focus();
 });
 $("length").addEventListener("input", render);
+$("printerMargin").addEventListener("input", render);
 $("autoLength").addEventListener("change", render);
 // Schloss am Titel: zu = "Reset" lässt den Titel stehen, offen (Standard) = "Reset" leert ihn mit. Der Titel bleibt immer änderbar.
 function setTitleLock(on) {
