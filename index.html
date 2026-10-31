@@ -355,7 +355,7 @@
   </section>
   </div>
 
-  <footer class="foot">© Markus Harrer · <a href="https://github.com/feststelltaste/nametagapp/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> · <a href="https://github.com/feststelltaste/nametagapp" target="_blank" rel="noopener">github.com/feststelltaste/nametagapp</a></footer>
+  <footer class="foot">© Markus Harrer · <a href="https://github.com/feststelltaste/nametagapp/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> · <a href="https://github.com/feststelltaste/nametagapp" target="_blank" rel="noopener">github.com/feststelltaste/nametagapp</a> · <span id="version" title="Loaded page: last modified time of this page. main: latest commit on GitHub (looked up from api.github.com)"></span></footer>
 
   <div id="clearListBox" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="clearListTitle">
     <div class="card" style="width:min(440px, 100%)">
@@ -1629,6 +1629,22 @@ load(); applyI18n();
 render();
 Label.loadFonts().then(render);   // sobald die Schriften da sind, noch einmal zeichnen (und an die Live-Ansicht senden)
 document.fonts?.ready.then(render);
+</script>
+<script>
+// Versionsanzeige im Footer: Zeitstempel der geladenen Seite (vom Server) und neuester Commit auf main (GitHub-API, nur lesend).
+// Eine Commit-ID kann nicht in der Datei selbst stehen (ohne Build-Schritt); weicht "main" von der Zeit der Seite ab, ist evtl. noch eine alte Version geladen.
+(() => {
+  const box = document.getElementById("version");
+  const loaded = new Date(document.lastModified);
+  box.textContent = "page " + (isNaN(loaded) ? "?" : loaded.toISOString().slice(0, 16).replace("T", " ") + " UTC");
+  fetch("https://api.github.com/repos/feststelltaste/nametagapp/commits/main", { headers: { Accept: "application/vnd.github+json" } })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(c => {
+      const when = c.commit.committer.date.slice(0, 16).replace("T", " ");
+      box.innerHTML = box.textContent + ' · main <a href="' + c.html_url + '" target="_blank" rel="noopener"><code>' + c.sha.slice(0, 7) + "</code></a> (" + when + " UTC)";
+    })
+    .catch(() => {});
+})();
 </script>
 </body>
 </html>
