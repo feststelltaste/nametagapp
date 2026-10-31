@@ -211,7 +211,7 @@ const Label = (() => {
     const pad = Math.round(marginDots * PREVIEW_SCALE);
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(p.lengthPx * zoom * PREVIEW_SCALE) + 2 * pad;
-    canvas.height = p.widthDots * PREVIEW_SCALE;
+    canvas.height = (p.widthDots || WIDTH) * PREVIEW_SCALE;
     const ctx = canvas.getContext("2d");
     if (pad) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     ctx.drawImage(hi, pad, Math.round((canvas.height - hi.height) / 2));

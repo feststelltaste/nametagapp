@@ -446,8 +446,8 @@
 </main>
 
 <script src="vendor/qrcode.js"></script>
-<script src="label.js"></script>
-<script src="relay.js"></script>
+<script src="label.js?v=2026-10-31b"></script>   <!-- ?v=…: bei Änderungen an label.js hochzählen, damit Handys nicht eine alte Datei zur neuen Seite laden -->
+<script src="relay.js?v=2026-10-31b"></script>
 <script>
 "use strict";
 
@@ -627,7 +627,7 @@ function drawLabel() {
   $("length").disabled = model.autoLength || gapMode();
   $("autoLength").disabled = gapMode(); $("labelSizeBox").hidden = !gapMode();
   if (gapMode()) $("length").value = labelNum("labelL", 80);
-  previewWidthDots = plan.widthDots;
+  previewWidthDots = plan.widthDots || WIDTH;
 
   // Vorschau: liegend, in 3-facher Auflösung und glatt; immer 48 mm breit, mit kleinerer Schrift wird nur die Länge kürzer
   const marginDots = gapMode() ? 0 : Label.printerMarginDots(model);   // fertige Etiketten: der Drucker richtet sich an der Lücke aus, kein eigener Rand
@@ -643,7 +643,7 @@ function drawLabel() {
   // Druckbild: um 90° gedreht (Layout-x läuft entlang des Papiers, nach unten). Bei Zoom < 1 sitzt das kleinere
   // Etikett mittig auf dem 48 mm breiten Papier.
   const printLength = layout.width, printHeight = layout.height;
-  const PW = gapMode() ? Label.MAX_WIDTH : WIDTH;   // fertige Etiketten dürfen bis 72 mm breit sein; Endlospapier bleibt bei 48 mm
+  const PW = gapMode() ? (Label.MAX_WIDTH || 576) : WIDTH;   // fertige Etiketten dürfen bis 72 mm breit sein; Endlospapier bleibt bei 48 mm
   printSource.width = PW;
   printSource.height = printLength;
   const pctx = printCtx();
@@ -655,7 +655,7 @@ function drawLabel() {
   pctx.setTransform(1, 0, 0, 1, 0, 0);
   toOneBit(pctx);
   // Länge zur Abschätzung unter der Vorschau (gedruckte Größe, mit Zoom)
-  $("sizeInfo").textContent = gapMode() ? t("sizeInfo", Math.round(printLength / DOTS_PER_MM), Math.round(plan.widthDots / DOTS_PER_MM)) : t("sizeInfo", Math.round((printLength + 2 * marginDots) / DOTS_PER_MM), ROLL_MM);   // mit dem Rand des Druckers
+  $("sizeInfo").textContent = gapMode() ? t("sizeInfo", Math.round(printLength / DOTS_PER_MM), Math.round((plan.widthDots || WIDTH) / DOTS_PER_MM)) : t("sizeInfo", Math.round((printLength + 2 * marginDots) / DOTS_PER_MM), ROLL_MM);   // mit dem Rand des Druckers
 }
 
 // Der Drucker kennt nur Schwarz/Weiß: harter Schwellwert, damit die Vorschau genau zeigt, was gedruckt wird.
