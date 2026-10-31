@@ -748,7 +748,7 @@ function buildJob(imageData, { energy = 0x0040, speed = 24, quality = 0x32, tail
 // ---------- Phomemo (M221, M220, M110): ESC/POS-artiges Rasterprotokoll ----------
 // Aufbau nach phomemo-tools (M110/M220): Tempo, Dichte, Medientyp, GS v 0 Rasterbild, Fußzeile.
 // Rasterbit: 1 = schwarz, linkestes Pixel = höchstes Bit. Medientyp 0x0B = Endlospapier (getestet am Q218/M221 mit durchgehender Rolle); 0x0A = Etiketten mit Lücken, 0x26 = Markierung.
-const PHOMEMO = { service: 0xFF00, txUuid: "0000ff02-0000-1000-8000-00805f9b34fb", speed: 5, density: 10, media: 0x0B, chunk: 180, delay: 8, rowSeconds: 0.006, feedSeconds: 1.0 };
+const PHOMEMO = { service: 0xFF00, txUuid: "0000ff02-0000-1000-8000-00805f9b34fb", speed: 5, density: 10, media: 0x0B, chunk: 100, delay: 20, rowSeconds: 0.006, feedSeconds: 1.0 };
 function buildPhomemoJob(imageData) {
   const { data, width, height } = imageData;
   const bpr = Math.max(WIDTH / 8, Math.min(81, Math.round(Number($("phomemoWidth").value) || 72)));   // 1 mm = 8 Punkte = 1 Byte
