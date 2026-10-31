@@ -294,6 +294,7 @@
     <button id="disconnect" type="button" class="linkbtn" hidden></button>
     <div id="status"></div>
     <details id="btDiag" class="btfilter"><summary>Printer info / Drucker-Info (troubleshooting)</summary>
+      <button id="btTest" type="button" class="linkbtn" style="margin:6px 0">Run printer test (prints 4 small test strips) / Drucker-Test starten</button>
       <textarea id="btDiagText" readonly rows="9" spellcheck="false" style="width:100%;font:12px/1.3 monospace" placeholder="Appears after connecting."></textarea>
     </details>
   </div>
@@ -775,6 +776,59 @@ const isPhomemo = () => {
   if (type !== "auto") return type === "phomemo";
   return probedPhomemo === true;   // Automatik: hat das Gerät den Cat-Dienst AE30, wird dieser bevorzugt (so auch der M221, der beide Dienste hat)
 };
+
+// Testlauf: sendet mehrere Varianten nacheinander; jede druckt einen Rahmen mit so vielen schwarzen Balken wie ihre Nummer (A=1 … D=4)
+function testStrip(bars, bpr, { init = true, media = 0x0A, footer = true } = {}) {
+  const rows = 96, out = [];
+  if (init) out.push(0x1b, 0x4e, 0x0d, 5, 0x1b, 0x4e, 0x04, 10);
+  if (media != null) out.push(0x1f, 0x11, media);
+  out.push(0x1d, 0x76, 0x30, 0x00, bpr & 0xff, bpr >> 8, rows & 0xff, rows >> 8);
+  for (let y = 0; y < rows; y++) {
+    const frame = y < 3 || y >= rows - 3;
+    const bar = [...Array(bars).keys()].some(k => y >= 12 + k * 16 && y < 20 + k * 16);
+    for (let x = 0; x < bpr; x++) out.push(frame || bar ? 0xff : (x === 0 ? 0xc0 : x === bpr - 1 ? 0x03 : 0x00));
+  }
+  if (footer) out.push(0x1f, 0xf0, 0x05, 0x00, 0x1f, 0xf0, 0x03, 0x00);
+  return Uint8Array.from(out);
+}
+async function runPrinterTest() {
+  $("btTest").disabled = true;
+  try {
+    await ensureConnected();
+    const server = device.gatt;
+    const bpr = Math.max(48, Math.min(81, Math.round(Number($("phomemoWidth").value) || 54)));
+    const svcFf = await server.getPrimaryService(PHOMEMO.service), svcAe = await server.getPrimaryService(SERVICE);
+    const ff02 = await svcFf.getCharacteristic(PHOMEMO.txUuid), ae01 = await svcAe.getCharacteristic(TX_UUID);
+    for (const [uuid, svc] of [["0000ff03-0000-1000-8000-00805f9b34fb", svcFf], ["0000ae02-0000-1000-8000-00805f9b34fb", svcAe]]) {
+      try {   // Antworten des Druckers mitlesen: sie verraten das Protokoll
+        const c = await svc.getCharacteristic(uuid);
+        c.addEventListener("characteristicvaluechanged", e => diag(`  <- ${uuid.slice(4, 8)}: ${[...new Uint8Array(e.target.value.buffer)].map(b => b.toString(16).padStart(2, "0")).join(" ")}`));
+        await c.startNotifications();
+      } catch (e) { diag(`notify ${uuid.slice(4, 8)}: ${e.message}`); }
+    }
+    const variants = [
+      ["A", ff02, true, testStrip(1, bpr)],                       // ff02, mit Antwort, volle Befehle
+      ["B", ff02, false, testStrip(2, bpr, { media: 0x0B })],     // ff02, ohne Antwort, Endlospapier
+      ["C", ff02, false, testStrip(3, bpr, { init: false, media: null })],   // ff02 nur Raster + Fußzeile
+      ["D", ae01, false, testStrip(4, bpr)],                      // ae01 statt ff02
+    ];
+    for (const [name, char, withResponse, data] of variants) {
+      diag(`Test ${name}: ${data.length} bytes${withResponse ? ", with response" : ""}`);
+      try {
+        for (let i = 0; i < data.length; i += 100) {
+          const part = data.slice(i, i + 100);
+          await (withResponse ? char.writeValueWithResponse(part) : char.writeValueWithoutResponse(part));
+          await sleep(20);
+        }
+        diag(`  sent ${name}`);
+      } catch (e) { diag(`  ${name} failed: ${e.name}: ${e.message}`); }
+      await sleep(4000);
+    }
+    diag("Test finished. Which strips (A=1 bar … D=4 bars) came out?");
+  } catch (e) { diag(`Test error: ${e.name}: ${e.message}`); }
+  $("btTest").disabled = false;
+}
+$("btTest").addEventListener("click", runPrinterTest);
 
 // ---------- Bluetooth ----------
 const SERVICE = 0xAE30;
