@@ -287,6 +287,9 @@
         <option value="cat">Cat printer (X6, GB01, …)</option>
         <option value="phomemo">Phomemo M221 / M220 / M110</option>
       </select>
+      <label for="phomemoWidth" style="margin-top:10px" data-i18n="phomemoWidthLabel">Phomemo print width (mm)</label>
+      <input id="phomemoWidth" type="number" min="48" max="72" step="1" value="54" inputmode="numeric" style="width:6em">
+      <div class="hint" data-i18n="phomemoWidthHint">Width of the printable area of the Phomemo. The label (48 mm) is centred in it. If the print sits too far left or right or is cut off, change this value (48 to 72).</div>
     </details>
     <button id="disconnect" type="button" class="linkbtn" hidden></button>
     <div id="status"></div>
@@ -453,7 +456,7 @@ const T = {
     flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
     bubbles: "Sprechblasen in der Live-Ansicht", bubbleNamePh: "Verrate uns deinen Namen", bubbleGreetingPh: "{welcher} {name} bist du?", bubbleTagsPh: "Was begeistert dich?", bubbleHint: "Leer lassen für den Standardtext. {name} = Name vom Etikett, {welcher} = Welcher/Welche (nach Geschlecht).",
     openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
-    printerTypeLabel: "Druckertyp", printerTypeAuto: "Automatisch (nach Bluetooth-Name)",
+    printerTypeLabel: "Druckertyp", phomemoWidthLabel: "Phomemo-Druckbreite (mm)", phomemoWidthHint: "Breite des bedruckbaren Bereichs des Phomemo. Das Etikett (48 mm) wird darin zentriert. Sitzt der Druck zu weit links oder rechts oder wird abgeschnitten, ändere diesen Wert (48 bis 72).", printerTypeAuto: "Automatisch (nach Bluetooth-Name)",
     btFilterTitle: "Bluetooth-Filter (optional)", btFilterHint: "Nur Geräte zeigen, deren Bluetooth-Name so beginnt. Mehrere Namen mit Komma trennen. Leer: alle Geräte in der Nähe zeigen.",
     fullscreenTitle: "Vollbild an/aus", connectPrinter: "Drucker verbinden", guestOk: "✓ Gast: Passt",
     openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", welcomeLabel: "Text für den zweiten Bildschirm (optional)", welcomeTitlePh: "Willkommen bei uns!", welcomeSubPh: "Hier gibt es dein Namensschild!", welcomeClearTitle: "Text für den zweiten Bildschirm leeren",
@@ -501,7 +504,7 @@ const T = {
     flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
     bubbles: "Speech bubbles in the live view", bubbleNamePh: "Tell us your name", bubbleGreetingPh: "Which {name} are you?", bubbleTagsPh: "What excites you?", bubbleHint: "Leave empty for the default. {name} = name on the label.",
     openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
-    printerTypeLabel: "Printer type", printerTypeAuto: "Automatic (by Bluetooth name)",
+    printerTypeLabel: "Printer type", phomemoWidthLabel: "Phomemo print width (mm)", phomemoWidthHint: "Width of the printable area of the Phomemo. The label (48 mm) is centred in it. If the print sits too far left or right or is cut off, change this value (48 to 72).", printerTypeAuto: "Automatic (by Bluetooth name)",
     btFilterTitle: "Bluetooth filter (optional)", btFilterHint: "Only show devices whose Bluetooth name starts with this. Several names: separate them with commas. Empty: show all devices nearby.",
     fullscreenTitle: "Full screen on/off", connectPrinter: "Connect printer", guestOk: "✓ Guest: OK",
     openTop: "Open the second screen (live view) in a new window", welcomeLabel: "Second screen text (optional)", welcomeTitlePh: "Welcome!", welcomeSubPh: "Get your name tag here!", welcomeClearTitle: "Clear the second screen text",
@@ -632,7 +635,7 @@ function toOneBit(ctx) {
 
 // Eingaben und Optionen bleiben beim Neuladen erhalten (localStorage; ohne Zugriff startet die Seite leer).
 const FIELDS_KEY = "meetupapp.fields";
-const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub", "bubbleName", "bubbleGreeting", "bubbleTags", "btFilter", "printerType", "printerMargin"];
+const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub", "bubbleName", "bubbleGreeting", "bubbleTags", "btFilter", "printerType", "phomemoWidth", "printerMargin"];
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode", "bubbles"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
@@ -741,17 +744,19 @@ function buildJob(imageData, { energy = 0x0040, speed = 24, quality = 0x32, tail
 // ---------- Phomemo (M221, M220, M110): ESC/POS-artiges Rasterprotokoll ----------
 // Aufbau nach phomemo-tools (M110/M220): Tempo, Dichte, Medientyp, GS v 0 Rasterbild, Fußzeile.
 // Rasterbit: 1 = schwarz, linkestes Pixel = höchstes Bit. Medientyp 0x0A = Etiketten mit Lücken (0x0B = Endlos, 0x26 = Markierung).
-const PHOMEMO = { service: 0xFF00, txUuid: "0000ff02-0000-1000-8000-00805f9b34fb", speed: 5, density: 10, media: 0x0A, bytesPerRow: WIDTH / 8, chunk: 100, delay: 20, rowSeconds: 0.006, feedSeconds: 1.0 };
+const PHOMEMO = { service: 0xFF00, txUuid: "0000ff02-0000-1000-8000-00805f9b34fb", speed: 5, density: 10, media: 0x0A, chunk: 100, delay: 20, rowSeconds: 0.006, feedSeconds: 1.0 };
 function buildPhomemoJob(imageData) {
   const { data, width, height } = imageData;
-  const bpr = PHOMEMO.bytesPerRow;
+  const bpr = Math.max(WIDTH / 8, Math.min(72, Math.round(Number($("phomemoWidth").value) || 54)));   // 1 mm = 8 Punkte = 1 Byte
+  const off = Math.floor((bpr - WIDTH / 8) / 2);   // das 48-mm-Bild liegt mittig im bedruckbaren Bereich
   const out = [0x1b, 0x4e, 0x0d, PHOMEMO.speed, 0x1b, 0x4e, 0x04, PHOMEMO.density, 0x1f, 0x11, PHOMEMO.media,
                0x1d, 0x76, 0x30, 0x00, bpr & 0xff, bpr >> 8, height & 0xff, height >> 8];
   for (let y = 0; y < height; y++) {
     for (let bx = 0; bx < bpr; bx++) {
       let byte = 0;
-      for (let b = 0; b < 8; b++) {
-        const i = (y * width + bx * 8 + b) * 4;
+      const sx = (bx - off) * 8;
+      for (let b = 0; b < 8 && sx >= 0 && sx < width; b++) {
+        const i = (y * width + sx + b) * 4;
         if (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2] < 128) byte |= 0x80 >> b;
       }
       out.push(byte === 0x0a ? 0x14 : byte);   // 0x0A würde als Zeilenvorschub gelesen
@@ -830,7 +835,8 @@ async function printCanvas() {
 const status = (text, error = false) => { $("status").textContent = text; $("status").className = error ? "err" : ""; };
 
 $("btFilter").addEventListener("input", saveFields);
-$("printerType").addEventListener("change", saveFields);   // der Filter wird gemerkt
+$("printerType").addEventListener("change", saveFields);
+$("phomemoWidth").addEventListener("input", saveFields);   // der Filter wird gemerkt
 $("disconnect").addEventListener("click", () => { $("disconnectBox").hidden = false; $("disconnectCancel").focus(); });   // erst Rückfrage im Dialog
 $("disconnectCancel").addEventListener("click", () => { $("disconnectBox").hidden = true; });
 $("disconnectYes").addEventListener("click", () => { $("disconnectBox").hidden = true; device?.gatt.disconnect(); });   // gattserverdisconnected stellt den Knopf wieder auf „Verbinden“
