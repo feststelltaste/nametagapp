@@ -321,6 +321,7 @@
         <div class="zoombtns" id="marginsLeft" role="group">
           <button type="button" class="chip" data-cm="0" aria-pressed="true">0</button>
           <button type="button" class="chip" data-cm="0.5" aria-pressed="false">0,5</button>
+          <button type="button" class="chip" data-cm="0.8" aria-pressed="false">0,8</button>
           <button type="button" class="chip" data-cm="1" aria-pressed="false">1</button>
           <button type="button" class="chip" data-cm="1.5" aria-pressed="false">1,5</button>
         </div>
@@ -330,6 +331,7 @@
         <div class="zoombtns" id="marginsRight" role="group">
           <button type="button" class="chip" data-cm="0" aria-pressed="true">0</button>
           <button type="button" class="chip" data-cm="0.5" aria-pressed="false">0,5</button>
+          <button type="button" class="chip" data-cm="0.8" aria-pressed="false">0,8</button>
           <button type="button" class="chip" data-cm="1" aria-pressed="false">1</button>
           <button type="button" class="chip" data-cm="1.5" aria-pressed="false">1,5</button>
         </div>
@@ -439,7 +441,7 @@
 
 // ---------- Etikett zeichnen ----------
 let zoom = 1;   // Druckgröße: 1, 0.75 oder 0.5 (Schrift kleiner, die Etikettenbreite bleibt)
-let sideLeft = 0, sideRight = 0;   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom). Standard 0: der Drucker lässt ohnehin etwa 0,8 cm Papier an beiden Enden frei
+let sideLeft = 0.8, sideRight = 0;   // Standard: der Drucker lässt am Ende des Streifens von allein ca. 0,8 cm leer, am Anfang nicht; deshalb links (= Anfang) 0,8 cm Rand   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom). Standard 0: der Drucker lässt ohnehin etwa 0,8 cm Papier an beiden Enden frei
 const ROLL_MM = 57;   // Rollenbreite: immer 57 mm, davon werden 48 mm bedruckt (384 Punkte)
 const { PREVIEW_SCALE, WIDTH, DOTS_PER_MM, firstName } = Label;   // Etikett-Berechnung und -Zeichnung: label.js
 
@@ -656,7 +658,7 @@ const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitl
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode", "bubbles"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
-    const state = { gender, rollCount, zoom, sideLeft, sideRight, titleLocked: titleLocked(), greetingLocked: greetingLocked() };
+    const state = { gender, rollCount, zoom, sideLeft, sideRight, marginsV: 2, titleLocked: titleLocked(), greetingLocked: greetingLocked() };
     for (const id of TEXT_FIELDS) state[id] = $(id).value;
     for (const id of CHECK_FIELDS) state[id] = $(id).checked;
     localStorage.setItem(FIELDS_KEY, JSON.stringify(state));
@@ -1554,10 +1556,11 @@ function restoreFields() {
   }
   if ([1, 2, 3].includes(state.rollCount)) rollCount = state.rollCount;
   if ([1, 0.75, 0.5].includes(state.zoom)) zoom = state.zoom;
-  const MARGINS = [0, 0.5, 1, 1.5];
-  if (MARGINS.includes(state.sideCm)) sideLeft = sideRight = state.sideCm;   // älterer gemeinsamer Wert
-  if (MARGINS.includes(state.sideLeft)) sideLeft = state.sideLeft;
-  if (MARGINS.includes(state.sideRight)) sideRight = state.sideRight;
+  const MARGINS = [0, 0.5, 0.8, 1, 1.5];
+  if (state.marginsV === 2) {   // erst gespeicherte Werte der getrennten Ränder übernehmen; ältere Stände bekommen die neuen Standardwerte
+    if (MARGINS.includes(state.sideLeft)) sideLeft = state.sideLeft;
+    if (MARGINS.includes(state.sideRight)) sideRight = state.sideRight;
+  }
   if (state.titleLocked === true) setTitleLock(true);
   if (state.greetingLocked === true) setGreetingLock(true);
 }
