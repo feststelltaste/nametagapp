@@ -109,11 +109,24 @@ const Label = (() => {
       let fit = { size: 0, lines: [] };
       // Bevorzugt eine Zeile (lange Namen werden dafür kleiner), erst unter 48 px wird umbrochen.
       if (name) {
+        let fitted = false;
         search: for (const [maxLines, minSize] of [[1, 48], [2, 28]]) {
           for (let maxSize = 120; maxSize >= minSize; maxSize -= 4) {
             fit = fitName(probe, name, inner, maxSize, minSize, maxLines);
-            if (fit.lines.length <= maxLines &&
-                fixedHeight + fit.lines.length * Math.round(fit.size * 1.12) + 14 <= W) break search;
+            probe.font = `900 ${fit.size}px ${FONT_SANS}`;
+            const widest = Math.max(0, ...fit.lines.map(l => probe.measureText(l).width));   // ein einzelnes langes Wort bricht nicht um: Breite muss ausdrücklich passen
+            if (fit.lines.length <= maxLines && widest <= inner &&
+                fixedHeight + fit.lines.length * Math.round(fit.size * 1.12) + 14 <= W) { fitted = true; break search; }
+          }
+        }
+        // Sehr lange Namen (auch ein einziges langes Wort): weiter verkleinern, bis Breite und Höhe passen (bis 8 px)
+        if (!fitted) {
+          for (let size = 26; size >= 8; size -= 2) {
+            probe.font = `900 ${size}px ${FONT_SANS}`;
+            const lines = wrapWords(probe, name, inner);
+            const widest = Math.max(0, ...lines.map(l => probe.measureText(l).width));
+            fit = { size, lines };
+            if (widest <= inner && fixedHeight + lines.length * Math.round(size * 1.12) + 14 <= W) break;
           }
         }
       }
