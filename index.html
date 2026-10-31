@@ -780,6 +780,22 @@ const isPhomemo = () => {
   return probedPhomemo === true;   // Automatik: hat das Gerät den Phomemo-Dienst FF00, wird dieser bevorzugt (der M221 hat beide Dienste, druckt aber nur über FF00); sonst Cat-Dienst AE30
 };
 
+// Antworten des Phomemo mitlesen (Kanal ff03) und in der Drucker-Info festhalten; "01 01" (Paket angekommen) wird zusammengefasst, alles andere einzeln gezeigt
+let ackCount = 0, notifyChar = null;
+function flushAcks() { if (ackCount) { diag(`  <- 01 01 x${ackCount}`); ackCount = 0; } }
+async function watchPhomemo(service) {
+  try {
+    const c = await service.getCharacteristic("0000ff03-0000-1000-8000-00805f9b34fb");
+    if (notifyChar === c) return;
+    notifyChar = c;
+    c.addEventListener("characteristicvaluechanged", e => {
+      const hex = [...new Uint8Array(e.target.value.buffer)].map(b => b.toString(16).padStart(2, "0")).join(" ");
+      if (hex === "01 01") { ackCount++; return; }
+      flushAcks(); diag(`  <- ${hex}`);
+    });
+    await c.startNotifications();
+  } catch (e) { diag(`notify ff03: ${e.message}`); }
+}
 // Testlauf: sendet mehrere Varianten nacheinander; jede druckt einen Rahmen mit so vielen schwarzen Balken wie ihre Nummer (A=1 … D=4)
 function testStrip(bars, bpr, { init = true, media = 0x0B, footer = "both", rows = 96 } = {}) {
   const out = [];
@@ -903,6 +919,7 @@ async function ensureConnected() {
     catch { service = await server.getPrimaryService(SERVICE); probedPhomemo = false; }
   } else service = await server.getPrimaryService(isPhomemo() ? PHOMEMO.service : SERVICE);
   txChar = await service.getCharacteristic(isPhomemo() ? PHOMEMO.txUuid : TX_UUID);
+  if (isPhomemo()) await watchPhomemo(service);
   updatePrinterUi();
   return txChar;
 }
@@ -934,6 +951,7 @@ async function printCanvas() {
     await sleep(link.delay);
   }
   const sent = (performance.now() - started) / 1000;
+  await sleep(300); flushAcks();
   status(t("sent", sent.toFixed(1), data.length));
   // Der Drucker meldet nicht, wann er fertig ist: geschätzte Druckdauer abwarten.
   const remaining = started + (printSource.height * link.rowSeconds + link.feedSeconds) * 1000 - performance.now();
