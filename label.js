@@ -5,7 +5,7 @@
 
 const Label = (() => {
   const PREVIEW_SCALE = 3;   // Vorschau in 3-facher Auflösung, damit sie glatt statt pixelig aussieht
-  const WIDTH = 384, MARGIN = 10, DOTS_PER_MM = 8;   // WIDTH = Druckbreite des Druckers in Punkten
+  const WIDTH = 384, MAX_WIDTH = 576, MARGIN = 10, DOTS_PER_MM = 8;   // WIDTH = Standard-Druckbreite (48 mm); MAX_WIDTH = größte Etikettenbreite bei fertigen Etiketten (72 mm, Phomemo)
   // Schriften liegen in vendor/fonts (Roboto, Roboto Mono): auf jedem Gerät sieht das Etikett gleich aus. Danach kommen Ersatzschriften, falls sie fehlen.
   const FONT_SANS = '"Roboto", Arial, "Segoe UI", sans-serif';
   const FONT_TEXT = '"Roboto", Arial, "Segoe UI", sans-serif';
@@ -66,7 +66,7 @@ const Label = (() => {
     const name = displayName(model.name || "", model.firstOnly !== false);
     const tags = parseTags(model.tags || "");
     const zoom = model.zoom || 1;
-    const W = Math.max(80, Math.min(WIDTH, Math.round((model.widthMm || WIDTH / DOTS_PER_MM) * DOTS_PER_MM)));   // Etikettenbreite quer zum Druckkopf in Punkten (Standard: volle 48 mm = 384 Punkte; schmalere Etiketten werden mittig gedruckt)
+    const W = Math.max(80, Math.min(MAX_WIDTH, Math.round((model.widthMm || WIDTH / DOTS_PER_MM) * DOTS_PER_MM)));   // Etikettenbreite quer zum Druckkopf in Punkten (Standard: volle 48 mm = 384 Punkte; schmalere Etiketten werden mittig gedruckt)
     const leftCm = model.sideLeftCm ?? model.sideCm ?? 0, rightCm = model.sideRightCm ?? model.sideCm ?? 0;   // Rand links und rechts getrennt (cm)
     const autoLength = model.autoLength !== false;
     const lengthMm = model.lengthMm || 80;
@@ -236,5 +236,5 @@ const Label = (() => {
     ? Promise.all(FONT_LOADS.map(font => document.fonts.load(font, "AaÄäÖöÜüß#Łł"))).then(() => {}, () => {})
     : Promise.resolve());
 
-  return { PREVIEW_SCALE, WIDTH, MARGIN, DOTS_PER_MM, plan, previewCanvas, printerMarginDots, firstName, displayName, loadFonts };
+  return { PREVIEW_SCALE, WIDTH, MAX_WIDTH, MARGIN, DOTS_PER_MM, plan, previewCanvas, printerMarginDots, firstName, displayName, loadFonts };
 })();
