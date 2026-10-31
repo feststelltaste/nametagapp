@@ -766,9 +766,12 @@ function buildPhomemoJob(imageData) {
   return Uint8Array.from(out);
 }
 // "auto": Phomemo-Geräte heißen M221, M220, M110, T02 …; alles andere wird als Cat-Printer behandelt
+let probedPhomemo = null;   // Ergebnis der Dienstsuche bei unbekanntem Gerätenamen (Automatik)
 const isPhomemo = () => {
   const type = $("printerType").value;
-  return type === "phomemo" || (type !== "cat" && /^(M\d{2,3}|T0\d|Phomemo)/i.test(device?.name || ""));
+  if (type !== "auto") return type === "phomemo";
+  if (/^(M\d{2,3}|Q\d{3}|T0\d|Phomemo)/i.test(device?.name || "")) return true;   // z. B. M221 meldet sich als Q218…
+  return probedPhomemo === true;
 };
 
 // ---------- Bluetooth ----------
@@ -793,9 +796,12 @@ async function ensureConnected() {
     device.addEventListener("gattserverdisconnected", () => { txChar = null; updatePrinterUi(); });
   }
   const server = await device.gatt.connect();
-  const phomemo = isPhomemo();
-  const service = await server.getPrimaryService(phomemo ? PHOMEMO.service : SERVICE);
-  txChar = await service.getCharacteristic(phomemo ? PHOMEMO.txUuid : TX_UUID);
+  let service;
+  if ($("printerType").value === "auto" && !isPhomemo()) {   // unbekannter Name: den vorhandenen Dienst suchen
+    try { service = await server.getPrimaryService(SERVICE); probedPhomemo = false; }
+    catch { service = await server.getPrimaryService(PHOMEMO.service); probedPhomemo = true; }
+  } else service = await server.getPrimaryService(isPhomemo() ? PHOMEMO.service : SERVICE);
+  txChar = await service.getCharacteristic(isPhomemo() ? PHOMEMO.txUuid : TX_UUID);
   updatePrinterUi();
   return txChar;
 }
