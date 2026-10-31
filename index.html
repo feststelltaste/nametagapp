@@ -293,6 +293,9 @@
     </details>
     <button id="disconnect" type="button" class="linkbtn" hidden></button>
     <div id="status"></div>
+    <details id="btDiag" class="btfilter"><summary>Printer info / Drucker-Info (troubleshooting)</summary>
+      <textarea id="btDiagText" readonly rows="9" spellcheck="false" style="width:100%;font:12px/1.3 monospace" placeholder="Appears after connecting."></textarea>
+    </details>
   </div>
 
   <section class="settings">
@@ -784,6 +787,20 @@ const PRINT = { speed: 24, energy: 0x0040, quality: 0x32, tail: 8, chunk: 100, d
 
 let device = null, txChar = null;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// Diagnose: listet die Bluetooth-Dienste des Druckers (nur bekannte, der Browser zeigt keine anderen) und Fehler, zum Kopieren
+const EXTRA_SERVICES = [0xFF00, 0xFFE0, 0xFFF0, 0xFE59, 0x18F0, 0xAF30, 0xA000, "49535343-fe7d-4ae5-8fa9-9fafd205e455", "e7810a71-73ae-499d-8c15-faa9aef0c3f2"];
+const diag = (text, reset = false) => { const box = $("btDiagText"); box.value = (reset ? "" : box.value + "\n") + text; box.scrollTop = box.scrollHeight; };
+async function diagnose(server) {
+  diag(`Device: ${device.name}  (${new Date().toISOString()})`, true);
+  for (const uuid of [SERVICE, ...EXTRA_SERVICES]) {
+    try {
+      const service = await server.getPrimaryService(uuid);
+      const chars = await service.getCharacteristics();
+      diag(`service ${service.uuid}`);
+      for (const c of chars) diag(`  char ${c.uuid} [${Object.keys(c.properties).filter(k => c.properties[k]).join(",")}]`);
+    } catch {}
+  }
+}
 
 async function ensureConnected() {
   if (txChar && device?.gatt.connected) return txChar;
@@ -791,11 +808,12 @@ async function ensureConnected() {
     // Filter aus dem Feld unter dem Druckknopf (Namensanfänge, mit Komma getrennt); leer: alle Geräte in der Nähe, der Nutzer wählt seinen Drucker
     const prefixes = $("btFilter").value.split(/[,;\n]/).map(name => name.trim()).filter(Boolean);
     device = await navigator.bluetooth.requestDevice(prefixes.length
-      ? { filters: prefixes.map(namePrefix => ({ namePrefix })), optionalServices: [SERVICE, PHOMEMO.service] }
-      : { acceptAllDevices: true, optionalServices: [SERVICE, PHOMEMO.service] });
+      ? { filters: prefixes.map(namePrefix => ({ namePrefix })), optionalServices: [SERVICE, ...EXTRA_SERVICES] }
+      : { acceptAllDevices: true, optionalServices: [SERVICE, ...EXTRA_SERVICES] });
     device.addEventListener("gattserverdisconnected", () => { txChar = null; updatePrinterUi(); });
   }
   const server = await device.gatt.connect();
+  await diagnose(server);
   let service;
   if ($("printerType").value === "auto" && !isPhomemo()) {   // unbekannter Name: den vorhandenen Dienst suchen
     try { service = await server.getPrimaryService(SERVICE); probedPhomemo = false; }
@@ -820,6 +838,7 @@ async function printCanvas() {
   const image = printCtx().getImageData(0, 0, printSource.width, printSource.height);
   const mode = PRINT;
   const char = await ensureConnected();
+  diag(`Print: ${isPhomemo() ? "Phomemo" : "Cat"} profile, ${printSource.width}x${printSource.height} px, phomemoWidth=${$("phomemoWidth").value}`);
   const data = isPhomemo()
     ? buildPhomemoJob(image)
     : buildJob(image, { energy: mode.energy, speed: mode.speed, quality: mode.quality, tailBd: mode.tail });
@@ -864,6 +883,7 @@ $("form").addEventListener("submit", async event => {
     if (room) startRoom({ blank: true });   // nächster Gast scannt einen frischen Code; wer den alten gescannt hat, behält sein Etikett
     if ($("rerollAfterPrint").checked && !greetingLocked() && $("greeting").value.trim()) rollGreeting(rollCount);   // nur wenn die Zwischenzeile benutzt wird
   } catch (error) {
+    diag(`Error: ${error.name}: ${error.message}`);
     if (error.name === "NotFoundError") status(t("noPrinter"), true);
     else status(t("error", error.message), true);
   } finally {
