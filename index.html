@@ -441,7 +441,7 @@
 
 // ---------- Etikett zeichnen ----------
 let zoom = 1;   // Druckgröße: 1, 0.75 oder 0.5 (Schrift kleiner, die Etikettenbreite bleibt)
-let sideLeft = 0.8, sideRight = 0;   // Standard: der Drucker lässt am Ende des Streifens von allein ca. 0,8 cm leer, am Anfang nicht; deshalb links (= Anfang) 0,8 cm Rand   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom). Standard 0: der Drucker lässt ohnehin etwa 0,8 cm Papier an beiden Enden frei
+let sideLeft = 0, sideRight = 0;   // Standard 0; die 0,5 cm am Anfang beim Phomemo fügt buildPhomemoJob selbst hinzu   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom). Standard 0: der Drucker lässt ohnehin etwa 0,8 cm Papier an beiden Enden frei
 const ROLL_MM = 57;   // Rollenbreite: immer 57 mm, davon werden 48 mm bedruckt (384 Punkte)
 const { PREVIEW_SCALE, WIDTH, DOTS_PER_MM, firstName } = Label;   // Etikett-Berechnung und -Zeichnung: label.js
 
@@ -658,7 +658,7 @@ const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitl
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode", "bubbles"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
-    const state = { gender, rollCount, zoom, sideLeft, sideRight, marginsV: 2, titleLocked: titleLocked(), greetingLocked: greetingLocked() };
+    const state = { gender, rollCount, zoom, sideLeft, sideRight, marginsV: 3, titleLocked: titleLocked(), greetingLocked: greetingLocked() };
     for (const id of TEXT_FIELDS) state[id] = $(id).value;
     for (const id of CHECK_FIELDS) state[id] = $(id).checked;
     localStorage.setItem(FIELDS_KEY, JSON.stringify(state));
@@ -763,13 +763,16 @@ function buildJob(imageData, { energy = 0x0040, speed = 24, quality = 0x32, tail
 // ---------- Phomemo (M221, M220, M110): ESC/POS-artiges Rasterprotokoll ----------
 // Aufbau nach phomemo-tools (M110/M220): Tempo, Dichte, Medientyp, GS v 0 Rasterbild, Fußzeile.
 // Rasterbit: 1 = schwarz, linkestes Pixel = höchstes Bit. Medientyp 0x0B = Endlospapier (getestet am Q218/M221 mit durchgehender Rolle); 0x0A = Etiketten mit Lücken, 0x26 = Markierung.
-const PHOMEMO = { service: 0xFF00, txUuid: "0000ff02-0000-1000-8000-00805f9b34fb", speed: 5, density: 10, media: 0x0B, chunk: 180, delay: 14, rowSeconds: 0.006, feedSeconds: 1.0 };
+const PHOMEMO = { service: 0xFF00, txUuid: "0000ff02-0000-1000-8000-00805f9b34fb", speed: 5, density: 10, media: 0x0B, startPadMm: 5, chunk: 180, delay: 14, rowSeconds: 0.006, feedSeconds: 1.0 };
 function buildPhomemoJob(imageData) {
   const { data, width, height } = imageData;
   const bpr = Math.max(WIDTH / 8, Math.min(81, Math.round(Number($("phomemoWidth").value) || 72)));   // 1 mm = 8 Punkte = 1 Byte
   const off = Math.floor((bpr - WIDTH / 8) / 2);   // das 48-mm-Bild liegt mittig im bedruckbaren Bereich
+  // Druckerspezifisch: am Anfang des Streifens kommt immer etwas leeres Papier dazu (der M221 druckt sonst direkt an der Kante). Nicht in der Vorschau, nicht einstellbar.
+  const pad = Math.round(PHOMEMO.startPadMm * DOTS_PER_MM), total = height + pad;
   const out = [0x1b, 0x4e, 0x0d, PHOMEMO.speed, 0x1b, 0x4e, 0x04, PHOMEMO.density, 0x1f, 0x11, PHOMEMO.media,
-               0x1d, 0x76, 0x30, 0x00, bpr & 0xff, bpr >> 8, height & 0xff, height >> 8];
+               0x1d, 0x76, 0x30, 0x00, bpr & 0xff, bpr >> 8, total & 0xff, total >> 8];
+  for (let i = 0; i < pad * bpr; i++) out.push(0);
   for (let y = 0; y < height; y++) {
     for (let bx = 0; bx < bpr; bx++) {
       let byte = 0;
@@ -1557,7 +1560,7 @@ function restoreFields() {
   if ([1, 2, 3].includes(state.rollCount)) rollCount = state.rollCount;
   if ([1, 0.75, 0.5].includes(state.zoom)) zoom = state.zoom;
   const MARGINS = [0, 0.5, 0.8, 1, 1.5];
-  if (state.marginsV === 2) {   // erst gespeicherte Werte der getrennten Ränder übernehmen; ältere Stände bekommen die neuen Standardwerte
+  if (state.marginsV === 3) {   // erst gespeicherte Werte der getrennten Ränder übernehmen; ältere Stände bekommen die neuen Standardwerte
     if (MARGINS.includes(state.sideLeft)) sideLeft = state.sideLeft;
     if (MARGINS.includes(state.sideRight)) sideRight = state.sideRight;
   }
