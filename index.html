@@ -294,7 +294,7 @@
     <button id="disconnect" type="button" class="linkbtn" hidden></button>
     <div id="status"></div>
     <details id="btDiag" class="btfilter"><summary>Printer info / Drucker-Info (troubleshooting)</summary>
-      <button id="btTest" type="button" class="linkbtn" style="margin:6px 0">Run printer test (prints 4 small test strips) / Drucker-Test starten</button>
+      <button id="btTest" type="button" class="linkbtn" style="margin:6px 0">Run printer test (4 small strips: footer variants) / Drucker-Test starten</button>
       <textarea id="btDiagText" readonly rows="9" spellcheck="false" style="width:100%;font:12px/1.3 monospace" placeholder="Appears after connecting."></textarea>
     </details>
   </div>
@@ -778,7 +778,7 @@ const isPhomemo = () => {
 };
 
 // Testlauf: sendet mehrere Varianten nacheinander; jede druckt einen Rahmen mit so vielen schwarzen Balken wie ihre Nummer (A=1 … D=4)
-function testStrip(bars, bpr, { init = true, media = 0x0A, footer = true } = {}) {
+function testStrip(bars, bpr, { init = true, media = 0x0B, footer = "both" } = {}) {
   const rows = 96, out = [];
   if (init) out.push(0x1b, 0x4e, 0x0d, 5, 0x1b, 0x4e, 0x04, 10);
   if (media != null) out.push(0x1f, 0x11, media);
@@ -788,7 +788,8 @@ function testStrip(bars, bpr, { init = true, media = 0x0A, footer = true } = {})
     const bar = [...Array(bars).keys()].some(k => y >= 12 + k * 16 && y < 20 + k * 16);
     for (let x = 0; x < bpr; x++) out.push(frame || bar ? 0xff : (x === 0 ? 0xc0 : x === bpr - 1 ? 0x03 : 0x00));
   }
-  if (footer) out.push(0x1f, 0xf0, 0x05, 0x00, 0x1f, 0xf0, 0x03, 0x00);
+  if (footer === "both" || footer === "05") out.push(0x1f, 0xf0, 0x05, 0x00);
+  if (footer === "both" || footer === "03") out.push(0x1f, 0xf0, 0x03, 0x00);
   return Uint8Array.from(out);
 }
 async function runPrinterTest() {
@@ -806,11 +807,12 @@ async function runPrinterTest() {
         await c.startNotifications();
       } catch (e) { diag(`notify ${uuid.slice(4, 8)}: ${e.message}`); }
     }
+    // Varianten der Fußzeile (Endlospapier, ff02): welche lässt am wenigsten leeres Papier nachlaufen?
     const variants = [
-      ["A", ff02, true, testStrip(1, bpr)],                       // ff02, mit Antwort, volle Befehle
-      ["B", ff02, false, testStrip(2, bpr, { media: 0x0B })],     // ff02, ohne Antwort, Endlospapier
-      ["C", ff02, false, testStrip(3, bpr, { init: false, media: null })],   // ff02 nur Raster + Fußzeile
-      ["D", ae01, false, testStrip(4, bpr)],                      // ae01 statt ff02
+      ["A: no footer", ff02, false, testStrip(1, bpr, { footer: "none" })],
+      ["B: footer 1f f0 05 00 only", ff02, false, testStrip(2, bpr, { footer: "05" })],
+      ["C: footer 1f f0 03 00 only", ff02, false, testStrip(3, bpr, { footer: "03" })],
+      ["D: both footers (as before)", ff02, false, testStrip(4, bpr, { footer: "both" })],
     ];
     for (const [name, char, withResponse, data] of variants) {
       diag(`Test ${name}: ${data.length} bytes${withResponse ? ", with response" : ""}`);
@@ -824,7 +826,7 @@ async function runPrinterTest() {
       } catch (e) { diag(`  ${name} failed: ${e.name}: ${e.message}`); }
       await sleep(4000);
     }
-    diag("Test finished. Which strips (A=1 bar … D=4 bars) came out?");
+    diag("Test finished. Measure the white paper after each strip (A=1 bar … D=4 bars).");
   } catch (e) { diag(`Test error: ${e.name}: ${e.message}`); }
   $("btTest").disabled = false;
 }
