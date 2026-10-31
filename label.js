@@ -66,6 +66,7 @@ const Label = (() => {
     const name = displayName(model.name || "", model.firstOnly !== false);
     const tags = parseTags(model.tags || "");
     const zoom = model.zoom || 1;
+    const W = Math.max(80, Math.min(WIDTH, Math.round((model.widthMm || WIDTH / DOTS_PER_MM) * DOTS_PER_MM)));   // Etikettenbreite quer zum Druckkopf in Punkten (Standard: volle 48 mm = 384 Punkte; schmalere Etiketten werden mittig gedruckt)
     const leftCm = model.sideLeftCm ?? model.sideCm ?? 0, rightCm = model.sideRightCm ?? model.sideCm ?? 0;   // Rand links und rechts getrennt (cm)
     const autoLength = model.autoLength !== false;
     const lengthMm = model.lengthMm || 80;
@@ -112,7 +113,7 @@ const Label = (() => {
           for (let maxSize = 120; maxSize >= minSize; maxSize -= 4) {
             fit = fitName(probe, name, inner, maxSize, minSize, maxLines);
             if (fit.lines.length <= maxLines &&
-                fixedHeight + fit.lines.length * Math.round(fit.size * 1.12) + 14 <= WIDTH) break search;
+                fixedHeight + fit.lines.length * Math.round(fit.size * 1.12) + 14 <= W) break search;
           }
         }
       }
@@ -128,7 +129,7 @@ const Label = (() => {
     // sie in Layout-Punkte um (durch den Zoom teilen); gedruckt bleiben Rand und maximale Länge so groß wie eingestellt.
     function planFor(z) {
       const leftMargin = leftCm * 10 * DOTS_PER_MM / z, rightMargin = rightCm * 10 * DOTS_PER_MM / z;
-      const minPx = 25 * DOTS_PER_MM / z, maxPx = 100 * DOTS_PER_MM / z;   // 25 bis 100 mm gedruckt
+      const minPx = (model.widthMm ? 10 : 25) * DOTS_PER_MM / z, maxPx = (model.widthMm ? 200 : 100) * DOTS_PER_MM / z;   // 25 bis 100 mm gedruckt (bei festem Etikettenformat: 10 bis 200 mm)
       const clamp = v => Math.max(minPx, Math.min(maxPx, v));
       let lengthPx;
       if (autoLength) {
@@ -147,11 +148,11 @@ const Label = (() => {
     function paint(scale) {
       const layout = document.createElement("canvas");
       layout.width = lengthPx * scale;
-      layout.height = WIDTH * scale;
+      layout.height = W * scale;
       const lctx = layout.getContext("2d");
       lctx.scale(scale, scale);
       lctx.fillStyle = "#fff";
-      lctx.fillRect(0, 0, lengthPx, WIDTH);
+      lctx.fillRect(0, 0, lengthPx, W);
       lctx.fillStyle = "#000";
       lctx.textAlign = "center";
       lctx.textBaseline = "middle";
@@ -164,7 +165,7 @@ const Label = (() => {
         y += titleLineH;
       }
       y = MARGIN + titleHeight;
-      y += Math.max(0, (WIDTH - MARGIN - y - bodyHeight) / 2);
+      y += Math.max(0, (W - MARGIN - y - bodyHeight) / 2);
 
       lctx.font = `${greetSize}px ${FONT_TEXT}`;
       for (const line of greetLines) {
@@ -193,13 +194,13 @@ const Label = (() => {
     }
 
     // Senkrechte Lage von Zwischenzeile, Name und Hashtags als Anteil der Etikettbreite (0 = oben, 1 = unten), wie in paint() und previewCanvas()
-    const bodyTop = MARGIN + titleHeight + Math.max(0, (WIDTH - MARGIN - (MARGIN + titleHeight) - bodyHeight) / 2);
+    const bodyTop = MARGIN + titleHeight + Math.max(0, (W - MARGIN - (MARGIN + titleHeight) - bodyHeight) / 2);
     const greetH = greetLines.length * greetLineH, nameH = fit.lines.length * nameLineH;
     const tagsTop = bodyTop + greetH + nameH + (fit.lines.length ? 14 : 0), tagsH = rows.length * (chipH + tagRowGap);
-    const frac = y => 0.5 * (1 - zoom) + zoom * y / WIDTH;
-    const regions = { greeting: [frac(bodyTop), frac(bodyTop + greetH)], name: [frac(bodyTop + greetH), frac(bodyTop + greetH + nameH)], tags: [frac(tagsTop), frac(tagsTop + tagsH)], tagFont: zoom * tagSize / WIDTH, tagRow: zoom * (chipH + tagRowGap) / WIDTH };   // tagFont/tagRow: Schriftgröße und Zeilenhöhe der Hashtags als Anteil der Etikettbreite
+    const frac = y => 0.5 * (1 - zoom) + zoom * y / W;
+    const regions = { greeting: [frac(bodyTop), frac(bodyTop + greetH)], name: [frac(bodyTop + greetH), frac(bodyTop + greetH + nameH)], tags: [frac(tagsTop), frac(tagsTop + tagsH)], tagFont: zoom * tagSize / W, tagRow: zoom * (chipH + tagRowGap) / W };   // tagFont/tagRow: Schriftgröße und Zeilenhöhe der Hashtags als Anteil der Etikettbreite
 
-    return { lengthPx, fullPrintedPx, printedPx: lengthPx * zoom, paint, regions, leftDots: leftCm * 10 * DOTS_PER_MM, rightDots: rightCm * 10 * DOTS_PER_MM };   // leftDots/rightDots: eingestellte Ränder in gedruckten Punkten
+    return { lengthPx, fullPrintedPx, printedPx: lengthPx * zoom, widthDots: W, paint, regions, leftDots: leftCm * 10 * DOTS_PER_MM, rightDots: rightCm * 10 * DOTS_PER_MM };   // leftDots/rightDots: eingestellte Ränder in gedruckten Punkten
   }
 
   /** Vorschau-Canvas (glatt, 3-fach): immer 48 mm breit, mit Zoom < 1 kürzer und die Schrift kleiner, mittig auf der festen Breite. */
@@ -210,7 +211,7 @@ const Label = (() => {
     const pad = Math.round(marginDots * PREVIEW_SCALE);
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(p.lengthPx * zoom * PREVIEW_SCALE) + 2 * pad;
-    canvas.height = WIDTH * PREVIEW_SCALE;
+    canvas.height = p.widthDots * PREVIEW_SCALE;
     const ctx = canvas.getContext("2d");
     if (pad) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     ctx.drawImage(hi, pad, Math.round((canvas.height - hi.height) / 2));

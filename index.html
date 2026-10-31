@@ -302,6 +302,20 @@
 
   <section class="settings">
     <h2 data-i18n="settingsTitle">Settings</h2>
+    <label for="paperType" data-i18n="paperTypeLabel">Paper</label>
+    <select id="paperType" aria-label="Paper">
+      <option value="continuous" data-i18n="paperContinuous">Continuous paper (length from content)</option>
+      <option value="gap" data-i18n="paperGap">Pre-cut labels / stickers (with gaps)</option>
+    </select>
+    <div id="labelSizeBox" hidden>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <div><label for="labelW" data-i18n="labelWLabel">Width across the print head (mm)</label>
+          <input id="labelW" type="number" min="10" max="48" step="1" value="30" inputmode="numeric" style="width:6em"></div>
+        <div><label for="labelL" data-i18n="labelLLabel">Length along the paper (mm)</label>
+          <input id="labelL" type="number" min="10" max="200" step="1" value="50" inputmode="numeric" style="width:6em"></div>
+      </div>
+      <div class="hint" data-i18n="labelSizeHint">The text runs along the paper (the label is printed sideways), so the short side of a sticker is usually the width across the print head. For a 50 × 30 mm sticker enter 30 and 50. The printer positions each label by its gap sensor.</div>
+    </div>
     <label for="length" data-i18n="lengthLabel">Label length (mm, paper runs sideways)</label>
     <input id="length" type="number" min="25" max="100" step="1" value="80" disabled>
     <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px"><input type="checkbox" id="autoLength" checked style="width:auto"> <span data-i18n="autoLength">Calculate length automatically from the content</span></label>
@@ -473,7 +487,7 @@ const T = {
     flip: "Drehrichtung umkehren (180°)", reroll: "Nach jedem Druck neu würfeln",
     bubbles: "Sprechblasen in der Live-Ansicht", bubbleNamePh: "Verrate uns deinen Namen", bubbleGreetingPh: "{welcher} {name} bist du?", bubbleTagsPh: "Was begeistert dich?", bubbleHint: "Leer lassen für den Standardtext. {name} = Name vom Etikett, {welcher} = Welcher/Welche (nach Geschlecht).",
     openView: "🖥 Live-Ansicht in neuem Fenster", openViewTitle: "Öffnet view.html in einem zweiten Fenster, z. B. für den anderen Monitor",
-    connectedTo: "Verbunden mit", printerTypeLabel: "Druckertyp", phomemoWidthLabel: "Phomemo-Druckbreite (mm)", phomemoWidthHint: "Breite des bedruckbaren Bereichs des Phomemo. Das Etikett (48 mm) wird darin zentriert. Sitzt der Druck zu weit links oder rechts oder wird abgeschnitten, ändere diesen Wert (48 bis 81). Standard 72 (volle Kopfbreite). 80 druckt beim M221 nicht, 54 saß etwa 1 cm zu weit rechts. Sitzt der Druck noch schief, Werte zwischen 54 und 72 probieren.", printerTypeAuto: "Automatisch (nach Bluetooth-Name)",
+    connectedTo: "Verbunden mit", paperTypeLabel: "Papier", paperContinuous: "Endlospapier (Länge aus dem Inhalt)", paperGap: "Fertige Etiketten / Aufkleber (mit Lücken)", labelWLabel: "Breite quer zum Druckkopf (mm)", labelLLabel: "Länge in Papierrichtung (mm)", labelSizeHint: "Der Text läuft in Papierrichtung (das Etikett wird quer gedruckt): die kurze Seite des Aufklebers ist meist die Breite quer zum Druckkopf. Für einen Aufkleber 50 × 30 mm trägst du 30 und 50 ein. Der Drucker richtet jedes Etikett an der Lücke aus.", printerTypeLabel: "Druckertyp", phomemoWidthLabel: "Phomemo-Druckbreite (mm)", phomemoWidthHint: "Breite des bedruckbaren Bereichs des Phomemo. Das Etikett (48 mm) wird darin zentriert. Sitzt der Druck zu weit links oder rechts oder wird abgeschnitten, ändere diesen Wert (48 bis 81). Standard 72 (volle Kopfbreite). 80 druckt beim M221 nicht, 54 saß etwa 1 cm zu weit rechts. Sitzt der Druck noch schief, Werte zwischen 54 und 72 probieren.", printerTypeAuto: "Automatisch (nach Bluetooth-Name)",
     btFilterTitle: "Bluetooth-Filter (optional)", btFilterHint: "Nur Geräte zeigen, deren Bluetooth-Name so beginnt. Mehrere Namen mit Komma trennen. Leer: alle Geräte in der Nähe zeigen.",
     fullscreenTitle: "Vollbild an/aus", connectPrinter: "Drucker verbinden", guestOk: "✓ Gast: Passt",
     openTop: "Zweiten Bildschirm (Live-Ansicht) in neuem Fenster öffnen", welcomeLabel: "Text für den zweiten Bildschirm (optional)", welcomeTitlePh: "Willkommen bei uns!", welcomeSubPh: "Hier gibt es dein Namensschild!", welcomeClearTitle: "Text für den zweiten Bildschirm leeren",
@@ -521,7 +535,7 @@ const T = {
     flip: "Reverse print direction (180°)", reroll: "Re-roll after each print",
     bubbles: "Speech bubbles in the live view", bubbleNamePh: "Tell us your name", bubbleGreetingPh: "Which {name} are you?", bubbleTagsPh: "What excites you?", bubbleHint: "Leave empty for the default. {name} = name on the label.",
     openView: "🖥 Live view in new window", openViewTitle: "Opens view.html in a second window, e.g. for the other monitor",
-    connectedTo: "Connected to", printerTypeLabel: "Printer type", phomemoWidthLabel: "Phomemo print width (mm)", phomemoWidthHint: "Width of the printable area of the Phomemo. The label (48 mm) is centred in it. If the print sits too far left or right or is cut off, change this value (48 to 81).", printerTypeAuto: "Automatic (by Bluetooth name)",
+    connectedTo: "Connected to", paperTypeLabel: "Paper", paperContinuous: "Continuous paper (length from content)", paperGap: "Pre-cut labels / stickers (with gaps)", labelWLabel: "Width across the print head (mm)", labelLLabel: "Length along the paper (mm)", labelSizeHint: "The text runs along the paper (the label is printed sideways), so the short side of a sticker is usually the width across the print head. For a 50 × 30 mm sticker enter 30 and 50. The printer positions each label by its gap sensor.", printerTypeLabel: "Printer type", phomemoWidthLabel: "Phomemo print width (mm)", phomemoWidthHint: "Width of the printable area of the Phomemo. The label (48 mm) is centred in it. If the print sits too far left or right or is cut off, change this value (48 to 81).", printerTypeAuto: "Automatic (by Bluetooth name)",
     btFilterTitle: "Bluetooth filter (optional)", btFilterHint: "Only show devices whose Bluetooth name starts with this. Several names: separate them with commas. Empty: show all devices nearby.",
     fullscreenTitle: "Full screen on/off", connectPrinter: "Connect printer", guestOk: "✓ Guest: OK",
     openTop: "Open the second screen (live view) in a new window", welcomeLabel: "Second screen text (optional)", welcomeTitlePh: "Welcome!", welcomeSubPh: "Get your name tag here!", welcomeClearTitle: "Clear the second screen text",
@@ -576,15 +590,15 @@ const setFirstOnly = on => $("firstOnly").setAttribute("aria-pressed", String(on
 // sodass der Text entlang des Papiervorschubs läuft.
 // Anzeigegröße der Vorschau: Maßstab (Bildschirmpixel je Druckpunkt) so, dass das Etikett bei Zoom 1 die Karte füllt;
 // bei kleinerer Schrift bleibt der Maßstab, die Breite (48 mm) also gleich und nur die Länge wird kürzer.
-let previewFullPx = 0, previewPrintedPx = 0;
+let previewFullPx = 0, previewPrintedPx = 0, previewWidthDots = WIDTH;
 function applyPreviewSize() {
   if (!previewFullPx) return;
   const card = canvas.closest(".preview");
   const available = Math.max(120, card.clientWidth - 32);
   const narrow = matchMedia("(max-width: 759px)").matches;
-  const k = Math.min(available / previewFullPx, 1, narrow ? screen.height * 0.17 / WIDTH : Infinity);   // Handy: das Etikett bleibt flach genug, damit Felder, Vorschau und Druck auf einen Bildschirm passen (screen.height: ändert sich nicht mit der Tastatur)   // Maßstab hängt nicht vom Zoom ab: gleiche Etikettenbreite, nur die Länge ändert sich
+  const k = Math.min(available / previewFullPx, 1, narrow ? screen.height * 0.17 / previewWidthDots : Infinity);   // Handy: das Etikett bleibt flach genug, damit Felder, Vorschau und Druck auf einen Bildschirm passen (screen.height: ändert sich nicht mit der Tastatur)   // Maßstab hängt nicht vom Zoom ab: gleiche Etikettenbreite, nur die Länge ändert sich
   canvas.style.width = Math.round(previewPrintedPx * k) + "px";
-  canvas.style.height = Math.round(WIDTH * k) + "px";
+  canvas.style.height = Math.round(previewWidthDots * k) + "px";
 }
 new ResizeObserver(applyPreviewSize).observe(canvas.closest(".preview"));
 addEventListener("resize", applyPreviewSize);
@@ -595,10 +609,12 @@ function labelName() {
   if ($("nickMode").checked) { const person = matchPerson(); if (person?.real) return person.real; }
   return $("name").value;
 }
+const gapMode = () => $("paperType").value === "gap";   // fertige Etiketten mit Lücken: feste Größe statt Länge aus dem Inhalt
+const labelNum = (id, fallback) => Math.max(10, Math.min(id === "labelW" ? 48 : 200, parseFloat($(id).value) || fallback));
 function labelModel() {
   return {
     title: $("title").value, greeting: $("greeting").value, name: labelName(), firstOnly: firstOnly(), tags: $("tags").value,
-    autoLength: $("autoLength").checked, lengthMm: parseFloat($("length").value) || 80, zoom, sideLeftCm: sideLeft, sideRightCm: sideRight,
+    autoLength: $("autoLength").checked && !gapMode(), lengthMm: gapMode() ? labelNum("labelL", 50) : parseFloat($("length").value) || 80, widthMm: gapMode() ? labelNum("labelW", 30) : undefined, zoom, sideLeftCm: sideLeft, sideRightCm: sideRight,
     printerMarginCm: parseFloat($("printerMargin").value) || 0,   // eigener Rand des Druckers: nur Vorschau
   };
 }
@@ -608,10 +624,13 @@ function drawLabel() {
   const plan = Label.plan(model);
   liveRegions = plan.regions; liveName = Label.displayName(model.name || "", model.firstOnly !== false);
   if (model.autoLength) $("length").value = Math.round(plan.lengthPx * zoom / DOTS_PER_MM);   // gedruckte Länge in mm
-  $("length").disabled = model.autoLength;
+  $("length").disabled = model.autoLength || gapMode();
+  $("autoLength").disabled = gapMode(); $("labelSizeBox").hidden = !gapMode();
+  if (gapMode()) $("length").value = labelNum("labelL", 50);
+  previewWidthDots = plan.widthDots;
 
   // Vorschau: liegend, in 3-facher Auflösung und glatt; immer 48 mm breit, mit kleinerer Schrift wird nur die Länge kürzer
-  const marginDots = Label.printerMarginDots(model);
+  const marginDots = gapMode() ? 0 : Label.printerMarginDots(model);   // fertige Etiketten: der Drucker richtet sich an der Lücke aus, kein eigener Rand
   const preview = Label.previewCanvas(plan, zoom, marginDots, true);
   canvas.width = preview.width;
   canvas.height = preview.height;
@@ -635,7 +654,7 @@ function drawLabel() {
   pctx.setTransform(1, 0, 0, 1, 0, 0);
   toOneBit(pctx);
   // Länge zur Abschätzung unter der Vorschau (gedruckte Größe, mit Zoom)
-  $("sizeInfo").textContent = t("sizeInfo", Math.round((printLength + 2 * marginDots) / DOTS_PER_MM), ROLL_MM);   // mit dem Rand des Druckers
+  $("sizeInfo").textContent = gapMode() ? t("sizeInfo", Math.round(printLength / DOTS_PER_MM), Math.round(plan.widthDots / DOTS_PER_MM)) : t("sizeInfo", Math.round((printLength + 2 * marginDots) / DOTS_PER_MM), ROLL_MM);   // mit dem Rand des Druckers
 }
 
 // Der Drucker kennt nur Schwarz/Weiß: harter Schwellwert, damit die Vorschau genau zeigt, was gedruckt wird.
@@ -652,7 +671,7 @@ function toOneBit(ctx) {
 
 // Eingaben und Optionen bleiben beim Neuladen erhalten (localStorage; ohne Zugriff startet die Seite leer).
 const FIELDS_KEY = "meetupapp.fields";
-const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub", "bubbleName", "bubbleGreeting", "bubbleTags", "btFilter", "printerType", "phomemoWidth", "printerMargin"];
+const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitle", "welcomeSub", "bubbleName", "bubbleGreeting", "bubbleTags", "btFilter", "printerType", "phomemoWidth", "printerMargin", "paperType", "labelW", "labelL"];
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode", "bubbles"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
@@ -762,13 +781,13 @@ function buildJob(imageData, { energy = 0x0040, speed = 24, quality = 0x32, tail
 // Aufbau nach phomemo-tools (M110/M220): Tempo, Dichte, Medientyp, GS v 0 Rasterbild, Fußzeile.
 // Rasterbit: 1 = schwarz, linkestes Pixel = höchstes Bit. Medientyp 0x0B = Endlospapier (getestet am Q218/M221 mit durchgehender Rolle); 0x0A = Etiketten mit Lücken, 0x26 = Markierung.
 const PHOMEMO = { service: 0xFF00, txUuid: "0000ff02-0000-1000-8000-00805f9b34fb", speed: 5, density: 10, media: 0x0B, startPadMm: 5, chunk: 180, delay: 14, rowSeconds: 0.006, feedSeconds: 1.0 };
-function buildPhomemoJob(imageData) {
+function buildPhomemoJob(imageData, { gap = false } = {}) {
   const { data, width, height } = imageData;
   const bpr = Math.max(WIDTH / 8, Math.min(81, Math.round(Number($("phomemoWidth").value) || 72)));   // 1 mm = 8 Punkte = 1 Byte
   const off = Math.floor((bpr - WIDTH / 8) / 2);   // das 48-mm-Bild liegt mittig im bedruckbaren Bereich
   // Druckerspezifisch: am Anfang des Streifens kommt immer etwas leeres Papier dazu (der M221 druckt sonst direkt an der Kante). Nicht in der Vorschau, nicht einstellbar.
-  const pad = Math.round(PHOMEMO.startPadMm * DOTS_PER_MM), total = height + pad;
-  const out = [0x1b, 0x4e, 0x0d, PHOMEMO.speed, 0x1b, 0x4e, 0x04, PHOMEMO.density, 0x1f, 0x11, PHOMEMO.media,
+  const pad = gap ? 0 : Math.round(PHOMEMO.startPadMm * DOTS_PER_MM), total = height + pad;   // fertige Etiketten: keine Zusatzzeilen, die Länge bleibt genau die Etikettenlänge
+  const out = [0x1b, 0x4e, 0x0d, PHOMEMO.speed, 0x1b, 0x4e, 0x04, PHOMEMO.density, 0x1f, 0x11, gap ? 0x0A : PHOMEMO.media,   // 0x0A = Etiketten mit Lücken
                0x1d, 0x76, 0x30, 0x00, bpr & 0xff, bpr >> 8, total & 0xff, total >> 8];
   for (let i = 0; i < pad * bpr; i++) out.push(0);
   for (let y = 0; y < height; y++) {
@@ -782,7 +801,8 @@ function buildPhomemoJob(imageData) {
       out.push(byte === 0x0a ? 0x14 : byte);   // 0x0A würde als Zeilenvorschub gelesen
     }
   }
-  // keine Fußzeile: der Drucker meldet den Abschluss auch ohne (1a 0f 0c) und schiebt dann nicht unnötig vor
+  // Endlospapier: keine Fußzeile (der Drucker meldet den Abschluss auch ohne und schiebt nicht unnötig vor); Etiketten mit Lücken: Fußzeile, damit er bis zur nächsten Lücke vorschiebt
+  if (gap) out.push(0x1f, 0xf0, 0x05, 0x00, 0x1f, 0xf0, 0x03, 0x00);
   return Uint8Array.from(out);
 }
 // "auto": Phomemo-Geräte heißen M221, M220, M110, T02 …; alles andere wird als Cat-Printer behandelt
@@ -875,7 +895,7 @@ async function printCanvas() {
   const char = await ensureConnected();
   diag(`Print: ${isPhomemo() ? "Phomemo" : "Cat"} profile, ${printSource.width}x${printSource.height} px, phomemoWidth=${$("phomemoWidth").value}`);
   const data = isPhomemo()
-    ? buildPhomemoJob(image)
+    ? buildPhomemoJob(image, { gap: gapMode() })
     : buildJob(image, { energy: mode.energy, speed: mode.speed, quality: mode.quality, tailBd: mode.tail });
   const started = performance.now();
   const link = isPhomemo() ? PHOMEMO : mode;
@@ -1442,6 +1462,7 @@ $("clear").addEventListener("click", () => {
 $("length").addEventListener("input", render);
 $("printerMargin").addEventListener("input", render);
 $("autoLength").addEventListener("change", render);
+for (const id of ["paperType", "labelW", "labelL"]) $(id).addEventListener("input", render);
 // Schloss am Titel: zu = "Reset" lässt den Titel stehen, offen (Standard) = "Reset" leert ihn mit. Der Titel bleibt immer änderbar.
 function setTitleLock(on) {
   $("titleLock").setAttribute("aria-pressed", String(on));
