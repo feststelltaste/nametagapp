@@ -317,11 +317,21 @@
         </div>
       </div>
       <div>
-        <label data-i18n="marginLabel">Side margins (cm)</label>
-        <div class="zoombtns" id="margins" role="group">
+        <label data-i18n="marginLeftLabel">Left margin (cm)</label>
+        <div class="zoombtns" id="marginsLeft" role="group">
           <button type="button" class="chip" data-cm="0" aria-pressed="true">0</button>
           <button type="button" class="chip" data-cm="0.5" aria-pressed="false">0,5</button>
           <button type="button" class="chip" data-cm="1" aria-pressed="false">1</button>
+          <button type="button" class="chip" data-cm="1.5" aria-pressed="false">1,5</button>
+        </div>
+      </div>
+      <div>
+        <label data-i18n="marginRightLabel">Right margin (cm)</label>
+        <div class="zoombtns" id="marginsRight" role="group">
+          <button type="button" class="chip" data-cm="0" aria-pressed="true">0</button>
+          <button type="button" class="chip" data-cm="0.5" aria-pressed="false">0,5</button>
+          <button type="button" class="chip" data-cm="1" aria-pressed="false">1</button>
+          <button type="button" class="chip" data-cm="1.5" aria-pressed="false">1,5</button>
         </div>
       </div>
     </div>
@@ -429,7 +439,7 @@
 
 // ---------- Etikett zeichnen ----------
 let zoom = 1;   // Druckgröße: 1, 0.75 oder 0.5 (Schrift kleiner, die Etikettenbreite bleibt)
-let sideCm = 0;   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom). Standard 0: der Drucker lässt ohnehin etwa 0,8 cm Papier an beiden Enden frei
+let sideLeft = 0, sideRight = 0;   // Seitenränder links und rechts in cm: 0, 0.5 oder 1 (gedruckte Größe, unabhängig vom Zoom). Standard 0: der Drucker lässt ohnehin etwa 0,8 cm Papier an beiden Enden frei
 const ROLL_MM = 57;   // Rollenbreite: immer 57 mm, davon werden 48 mm bedruckt (384 Punkte)
 const { PREVIEW_SCALE, WIDTH, DOTS_PER_MM, firstName } = Label;   // Etikett-Berechnung und -Zeichnung: label.js
 
@@ -477,7 +487,7 @@ const T = {
     roomDisclosure: "<b>Hinweis:</b> Beim Start verbindet sich diese Seite mit dem Drittanbieter <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (sichtbar: deine <mark>IP-Adresse</mark>, die Seitenadresse, deine Browser-Kennung und eine Zufalls-ID). <mark>Etikett-Daten gehen erst raus, wenn ein Gerät den QR-Code geöffnet hat</mark>, dann aber <mark>Ende-zu-Ende verschlüsselt</mark> und vom Dienst <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'><mark>bis zu 12 Stunden</mark> zwischengespeichert</a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details und Datenschutz-Hinweise in der README</a>.",
     roomCount: n => `Heute gesendet: ${n} von etwa 250 Nachrichten (Limit des kostenlosen Dienstes).`, roomLimit: "Limit des kostenlosen Dienstes erreicht. Es geht nach einer Pause oder morgen weiter.",
     roomWaiting: "Wartet auf das erste Gerät. Bisher wurde nichts gesendet.", roomLive: "Läuft: Änderungen gehen sofort an alle Geräte, die den QR-Code geöffnet haben.", roomOffline: "Kein Kontakt zum Relay-Dienst (Internet?). Der zweite Bildschirm bekommt erst wieder Änderungen, wenn er erreichbar ist.", roomOff: "Wird nicht geteilt.",
-    clear: "Zurücksetzen", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLabel: "Seitenränder (cm)", printerMarginLabel: "Eigener Rand des Druckers (cm)", printerMarginHint: "Leeres Papier, das der Drucker an beiden Enden von selbst lässt. Nur die Vorschau zeigt es, gedruckt wird nichts dazu. Andere Drucker können abweichen.",
+    clear: "Zurücksetzen", settingsTitle: "Einstellungen", colorLabel: "Hauptfarbe", colorReset: "Standard", zoomLabel: "Zoom (Druckgröße)", marginLeftLabel: "Rand links (cm)", marginRightLabel: "Rand rechts (cm)", printerMarginLabel: "Eigener Rand des Druckers (cm)", printerMarginHint: "Leeres Papier, das der Drucker an beiden Enden von selbst lässt. Nur die Vorschau zeigt es, gedruckt wird nichts dazu. Andere Drucker können abweichen.",
     sizeInfo: (l, w) => `Etikett ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Gesendet in ${sec} s (${bytes} Bytes) – warte auf den Druck …`,
     noBluetooth: "Web Bluetooth fehlt – bitte Chrome oder Edge über localhost/HTTPS nutzen.",
@@ -525,7 +535,7 @@ const T = {
     roomDisclosure: "<b>Note:</b> when you start, this page connects to the third party <a href='https://docs.ntfy.sh/privacy/' target='_blank' rel='noopener'><mark>ntfy.sh</mark></a> (visible: your <mark>IP address</mark>, the page address, your browser type and a random ID). <mark>Label data only leaves once a device has opened the QR code</mark>, but then <mark>end-to-end encrypted</mark> and <a href='https://docs.ntfy.sh/privacy/#data-retention' target='_blank' rel='noopener'>cached by the service <mark>for up to 12 hours</mark></a>. <a href='https://github.com/feststelltaste/nametagapp#privacy' target='_blank' rel='noopener'>Details and privacy notes in the README</a>.",
     roomCount: n => `Sent today: ${n} of about 250 messages (limit of the free service).`, roomLimit: "Limit of the free service reached. It continues after a pause or tomorrow.",
     roomWaiting: "Waiting for the first device. Nothing has been sent yet.", roomLive: "Running: changes go to every device that has opened the QR code right away.", roomOffline: "The relay is not reachable (internet?). The second screen gets changes again once it is.", roomOff: "Not shared.",
-    clear: "Reset", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLabel: "Side margins (cm)", printerMarginLabel: "Printer's own margin (cm)", printerMarginHint: "Blank paper the printer leaves at both ends by itself. Only the preview shows it, nothing extra is printed. Other printers may differ.",
+    clear: "Reset", settingsTitle: "Settings", colorLabel: "Main color", colorReset: "Default", zoomLabel: "Zoom (print size)", marginLeftLabel: "Left margin (cm)", marginRightLabel: "Right margin (cm)", printerMarginLabel: "Printer's own margin (cm)", printerMarginHint: "Blank paper the printer leaves at both ends by itself. Only the preview shows it, nothing extra is printed. Other printers may differ.",
     sizeInfo: (l, w) => `Label ≈ ${l} × ${w} mm`,
     sent: (sec, bytes) => `Sent in ${sec} s (${bytes} bytes) – waiting for the print …`,
     noBluetooth: "Web Bluetooth is missing – please use Chrome or Edge via localhost/HTTPS.",
@@ -588,7 +598,7 @@ function labelName() {
 function labelModel() {
   return {
     title: $("title").value, greeting: $("greeting").value, name: labelName(), firstOnly: firstOnly(), tags: $("tags").value,
-    autoLength: $("autoLength").checked, lengthMm: parseFloat($("length").value) || 80, zoom, sideCm,
+    autoLength: $("autoLength").checked, lengthMm: parseFloat($("length").value) || 80, zoom, sideLeftCm: sideLeft, sideRightCm: sideRight,
     printerMarginCm: parseFloat($("printerMargin").value) || 0,   // eigener Rand des Druckers: nur Vorschau
   };
 }
@@ -646,7 +656,7 @@ const TEXT_FIELDS = ["title", "greeting", "name", "tags", "length", "welcomeTitl
 const CHECK_FIELDS = ["autoLength", "flip", "rerollAfterPrint", "nickMode", "bubbles"];   // "Vorname" wird bewusst nicht gemerkt: er ist immer wieder an
 function saveFields() {
   try {
-    const state = { gender, rollCount, zoom, sideCm, titleLocked: titleLocked(), greetingLocked: greetingLocked() };
+    const state = { gender, rollCount, zoom, sideLeft, sideRight, titleLocked: titleLocked(), greetingLocked: greetingLocked() };
     for (const id of TEXT_FIELDS) state[id] = $(id).value;
     for (const id of CHECK_FIELDS) state[id] = $(id).checked;
     localStorage.setItem(FIELDS_KEY, JSON.stringify(state));
@@ -1544,7 +1554,10 @@ function restoreFields() {
   }
   if ([1, 2, 3].includes(state.rollCount)) rollCount = state.rollCount;
   if ([1, 0.75, 0.5].includes(state.zoom)) zoom = state.zoom;
-  if ([0, 0.5, 1].includes(state.sideCm)) sideCm = state.sideCm;
+  const MARGINS = [0, 0.5, 1, 1.5];
+  if (MARGINS.includes(state.sideCm)) sideLeft = sideRight = state.sideCm;   // älterer gemeinsamer Wert
+  if (MARGINS.includes(state.sideLeft)) sideLeft = state.sideLeft;
+  if (MARGINS.includes(state.sideRight)) sideRight = state.sideRight;
   if (state.titleLocked === true) setTitleLock(true);
   if (state.greetingLocked === true) setGreetingLock(true);
 }
@@ -1574,8 +1587,12 @@ $("theme").addEventListener("click", () => {
 function showZoom() { for (const b of document.querySelectorAll("#zoom [data-zoom]")) b.setAttribute("aria-pressed", String(Number(b.dataset.zoom) === zoom)); }
 for (const b of document.querySelectorAll("#zoom [data-zoom]")) b.addEventListener("click", () => { zoom = Number(b.dataset.zoom); showZoom(); render(); });
 showZoom();
-function showMargins() { for (const b of document.querySelectorAll("#margins [data-cm]")) b.setAttribute("aria-pressed", String(Number(b.dataset.cm) === sideCm)); }
-for (const b of document.querySelectorAll("#margins [data-cm]")) b.addEventListener("click", () => { sideCm = Number(b.dataset.cm); showMargins(); render(); });
+function showMargins() {
+  for (const b of document.querySelectorAll("#marginsLeft [data-cm]")) b.setAttribute("aria-pressed", String(Number(b.dataset.cm) === sideLeft));
+  for (const b of document.querySelectorAll("#marginsRight [data-cm]")) b.setAttribute("aria-pressed", String(Number(b.dataset.cm) === sideRight));
+}
+for (const b of document.querySelectorAll("#marginsLeft [data-cm]")) b.addEventListener("click", () => { sideLeft = Number(b.dataset.cm); showMargins(); render(); });
+for (const b of document.querySelectorAll("#marginsRight [data-cm]")) b.addEventListener("click", () => { sideRight = Number(b.dataset.cm); showMargins(); render(); });
 showMargins();
 // Hauptfarbe: überschreibt --accent (und die Schriftfarbe darauf); ohne Wahl gelten die Standardfarben von hell/dunkel
 const ACCENT_KEY = "meetupapp.accent";

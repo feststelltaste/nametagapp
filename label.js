@@ -53,7 +53,7 @@ const Label = (() => {
 
   /**
    * Berechnet das Etikett aus den Eingaben.
-   * model: { title, greeting, name, firstOnly, tags, autoLength, lengthMm, zoom, sideCm }
+   * model: { title, greeting, name, firstOnly, tags, autoLength, lengthMm, zoom, sideLeftCm, sideRightCm }   (sideCm: älterer gemeinsamer Wert für beide Seiten)
    * Ergebnis: { lengthPx, fullPrintedPx, printedPx, paint(scale) }
    *   lengthPx      Länge des Layouts in Layout-Punkten (bei Zoom < 1 größer als gedruckt)
    *   printedPx     gedruckte Länge in Druckpunkten (= lengthPx * zoom)
@@ -66,7 +66,7 @@ const Label = (() => {
     const name = displayName(model.name || "", model.firstOnly !== false);
     const tags = parseTags(model.tags || "");
     const zoom = model.zoom || 1;
-    const sideCm = model.sideCm ?? 0;
+    const leftCm = model.sideLeftCm ?? model.sideCm ?? 0, rightCm = model.sideRightCm ?? model.sideCm ?? 0;   // Rand links und rechts getrennt (cm)
     const autoLength = model.autoLength !== false;
     const lengthMm = model.lengthMm || 80;
 
@@ -76,8 +76,9 @@ const Label = (() => {
     const tagSize = 30, chipPadX = 6, chipH = 33, chipGap = 14, tagRowGap = 3;   // tagRowGap: Abstand zwischen zwei Hashtag-Zeilen (chipGap gilt waagerecht)
 
     // Misst Titel, Name und Hashtags für eine gegebene Etikettenlänge (in Punkten).
-    function measure(lengthPx, sideMargin) {
-      const inner = Math.max(60, lengthPx - 2 * sideMargin);
+    function measure(lengthPx, leftMargin, rightMargin) {
+      const inner = Math.max(60, lengthPx - leftMargin - rightMargin);
+      const cx = leftMargin + (lengthPx - leftMargin - rightMargin) / 2;   // Mitte des Textbereichs zwischen den Rändern
       probe.font = `bold ${titleSize}px ${FONT_TEXT}`;
       const titleLines = title ? wrapWords(probe, title, inner) : [];
       const titleWidth = Math.max(0, ...titleLines.map(l => probe.measureText(l).width));
@@ -119,28 +120,28 @@ const Label = (() => {
       const nameWidth = Math.max(0, ...fit.lines.map(l => probe.measureText(l).width));
       const nameLineH = Math.round(fit.size * 1.12);
       const bodyHeight = greetHeight + rows.length * (chipH + tagRowGap) + fit.lines.length * nameLineH + (fit.lines.length ? 14 : 0);
-      return { titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight,
+      return { cx, titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight,
                usedWidth: Math.max(titleWidth, greetWidth, rowsWidth, nameWidth) };
     }
 
     // Länge und Seitenränder gelten für das gedruckte Etikett. Das Layout wird mit dem Zoom verkleinert, deshalb rechnen wir
     // sie in Layout-Punkte um (durch den Zoom teilen); gedruckt bleiben Rand und maximale Länge so groß wie eingestellt.
     function planFor(z) {
-      const sideMargin = sideCm * 10 * DOTS_PER_MM / z;
+      const leftMargin = leftCm * 10 * DOTS_PER_MM / z, rightMargin = rightCm * 10 * DOTS_PER_MM / z;
       const minPx = 25 * DOTS_PER_MM / z, maxPx = 100 * DOTS_PER_MM / z;   // 25 bis 100 mm gedruckt
       const clamp = v => Math.max(minPx, Math.min(maxPx, v));
       let lengthPx;
       if (autoLength) {
-        const m = measure(maxPx, sideMargin);   // längere Namen werden kleiner statt das Etikett zu verlängern
-        lengthPx = clamp(Math.ceil(m.usedWidth) + 2 * sideMargin);
+        const m = measure(maxPx, leftMargin, rightMargin);   // längere Namen werden kleiner statt das Etikett zu verlängern
+        lengthPx = clamp(Math.ceil(m.usedWidth) + leftMargin + rightMargin);
       } else {
         lengthPx = clamp(Math.round(lengthMm * DOTS_PER_MM / z));
       }
-      return { lengthPx, sideMargin, m: measure(lengthPx, sideMargin) };
+      return { lengthPx, m: measure(lengthPx, leftMargin, rightMargin) };
     }
     const { lengthPx, m } = planFor(zoom);
     const fullPrintedPx = zoom === 1 ? lengthPx : planFor(1).lengthPx;   // gedruckte Länge bei Zoom 1: bestimmt den Anzeigemaßstab
-    const { titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight } = m;
+    const { cx, titleLines, greetLines, rows, fit, nameLineH, titleHeight, bodyHeight } = m;
 
     // Zeichnet das liegende Etikett; scale > 1 ergibt dasselbe Bild in höherer Auflösung (glatte Vorschau).
     function paint(scale) {
@@ -159,7 +160,7 @@ const Label = (() => {
       let y = MARGIN + (titleLines.length ? TITLE_INSET : 0);
       lctx.font = `bold ${titleSize}px ${FONT_TEXT}`;
       for (const line of titleLines) {
-        lctx.fillText(line, lengthPx / 2, y + titleLineH / 2);
+        lctx.fillText(line, cx, y + titleLineH / 2);
         y += titleLineH;
       }
       y = MARGIN + titleHeight;
@@ -167,13 +168,13 @@ const Label = (() => {
 
       lctx.font = `${greetSize}px ${FONT_TEXT}`;
       for (const line of greetLines) {
-        lctx.fillText(line, lengthPx / 2, y + greetLineH / 2);
+        lctx.fillText(line, cx, y + greetLineH / 2);
         y += greetLineH;
       }
 
       lctx.font = `900 ${fit.size}px ${FONT_SANS}`;
       for (const line of fit.lines) {
-        lctx.fillText(line, lengthPx / 2, y + nameLineH / 2);
+        lctx.fillText(line, cx, y + nameLineH / 2);
         y += nameLineH;
       }
       if (fit.lines.length) y += 14;
@@ -181,7 +182,7 @@ const Label = (() => {
       lctx.font = `500 ${tagSize}px ${FONT_CODE}`;
       for (const r of rows) {
         const total = r.reduce((s, c) => s + c.w, 0) + chipGap * (r.length - 1);
-        let x = (lengthPx - total) / 2;
+        let x = cx - total / 2;
         for (const chip of r) {
           lctx.fillText(chip.tag, x + chip.w / 2, y + chipH / 2 + 1, chip.w - 2 * chipPadX / 2);
           x += chip.w + chipGap;
