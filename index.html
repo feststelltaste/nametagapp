@@ -614,7 +614,7 @@ function drawLabel() {
 
   // Vorschau: liegend, in 3-facher Auflösung und glatt; immer 48 mm breit, mit kleinerer Schrift wird nur die Länge kürzer
   const marginDots = Label.printerMarginDots(model);
-  const preview = Label.previewCanvas(plan, zoom, marginDots);
+  const preview = Label.previewCanvas(plan, zoom, marginDots, true);
   canvas.width = preview.width;
   canvas.height = preview.height;
   canvas.getContext("2d").drawImage(preview, 0, 0);

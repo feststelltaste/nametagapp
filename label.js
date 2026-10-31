@@ -199,13 +199,13 @@ const Label = (() => {
     const frac = y => 0.5 * (1 - zoom) + zoom * y / WIDTH;
     const regions = { greeting: [frac(bodyTop), frac(bodyTop + greetH)], name: [frac(bodyTop + greetH), frac(bodyTop + greetH + nameH)], tags: [frac(tagsTop), frac(tagsTop + tagsH)], tagFont: zoom * tagSize / WIDTH, tagRow: zoom * (chipH + tagRowGap) / WIDTH };   // tagFont/tagRow: Schriftgröße und Zeilenhöhe der Hashtags als Anteil der Etikettbreite
 
-    return { lengthPx, fullPrintedPx, printedPx: lengthPx * zoom, paint, regions };
+    return { lengthPx, fullPrintedPx, printedPx: lengthPx * zoom, paint, regions, leftDots: leftCm * 10 * DOTS_PER_MM, rightDots: rightCm * 10 * DOTS_PER_MM };   // leftDots/rightDots: eingestellte Ränder in gedruckten Punkten
   }
 
   /** Vorschau-Canvas (glatt, 3-fach): immer 48 mm breit, mit Zoom < 1 kürzer und die Schrift kleiner, mittig auf der festen Breite. */
   // marginDots: der eigene Rand des Druckers (leeres Papier an beiden Enden, in Druckpunkten); er steht in der Vorschau links und rechts
   // vom Etikett, gedruckt wird er nicht (den lässt der Drucker selbst frei). Eine gestrichelte Linie zeigt, wo der bedruckte Bereich beginnt.
-  function previewCanvas(p, zoom, marginDots = 0) {
+  function previewCanvas(p, zoom, marginDots = 0, showMargins = false) {
     const hi = p.paint(PREVIEW_SCALE * zoom);
     const pad = Math.round(marginDots * PREVIEW_SCALE);
     const canvas = document.createElement("canvas");
@@ -217,6 +217,12 @@ const Label = (() => {
     if (pad) {
       ctx.strokeStyle = "rgba(0,0,0,.22)"; ctx.lineWidth = PREVIEW_SCALE; ctx.setLineDash([4 * PREVIEW_SCALE, 4 * PREVIEW_SCALE]);
       for (const x of [pad, canvas.width - pad]) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+    }
+    if (showMargins) {   // nur im Editor: eingestellte Ränder links und rechts rötlich getönt, mit durchgezogener Linie am Textbereich (nicht in der Live-Ansicht, nicht gedruckt)
+      const end = canvas.width - pad, l = p.leftDots * PREVIEW_SCALE, r = p.rightDots * PREVIEW_SCALE;
+      ctx.setLineDash([]); ctx.fillStyle = "rgba(200,16,46,.13)"; ctx.strokeStyle = "rgba(200,16,46,.85)"; ctx.lineWidth = PREVIEW_SCALE;
+      if (l) { ctx.fillRect(pad, 0, l, canvas.height); ctx.beginPath(); ctx.moveTo(pad + l, 0); ctx.lineTo(pad + l, canvas.height); ctx.stroke(); }
+      if (r) { ctx.fillRect(end - r, 0, r, canvas.height); ctx.beginPath(); ctx.moveTo(end - r, 0); ctx.lineTo(end - r, canvas.height); ctx.stroke(); }
     }
     return canvas;
   }
